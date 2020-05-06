@@ -15,11 +15,7 @@
 #define BUFFER_SIZE 16
 #define UINT32 4
 
-<<<<<<< Upstream, based on origin/master
 char RESPONSE[] = ": OK\n";
-=======
-char RESPONSE[] = "OK\n";
->>>>>>> 5606947 Actualizacion formato impresion por pantalla server
 
 /* ******************************************************************
  *                IMPLEMENTACION
@@ -95,24 +91,23 @@ int server_recv_message(socket_t* skt){
     	}
 
     	dbusmessage_server_set_message(msg,protocol,lHeader+lPadding+lBody);
-
-		sprintf(hex,"%.4x",(int)dbusmessage_get_id(msg));
-		printf("* Id: %s\n",hex);
-		printf("* Destino: %s\n",dbusmessage_server_get_destination(msg));
-		printf("* Path: %s\n",dbusmessage_server_get_path(msg));
-		printf("* Interfaz: %s\n",dbusmessage_server_get_interface(msg));
-		printf("* Metodo: %s\n",dbusmessage_server_get_method(msg));
-		if (dbusmessage_server_get_cant_args(msg)>0) {
-			printf("* Parámetros:\n");
-			args = dbusmessage_server_get_args(msg);
-			for(int i=0;i<dbusmessage_server_get_cant_args(msg);i++){
-				printf("    * %s\n",args[i]);
-			}
+	sprintf(hex,"%.4x",(int)dbusmessage_get_id(msg));
+	printf("* Id: %s\n",hex);
+	printf("* Destino: %s\n",dbusmessage_server_get_destination(msg));
+	printf("* Path: %s\n",dbusmessage_server_get_path(msg));
+	printf("* Interfaz: %s\n",dbusmessage_server_get_interface(msg));
+	printf("* Metodo: %s\n",dbusmessage_server_get_method(msg));
+	if (dbusmessage_server_get_cant_args(msg)>0) {
+		printf("* Parámetros:\n");
+		args = dbusmessage_server_get_args(msg);
+		for(int i=0;i<dbusmessage_server_get_cant_args(msg);i++){
+			printf("    * %s\n",args[i]);
 		}
-		strcpy(answer,hex);
-		strcat(answer,RESPONSE);
-		/*dbusmessage_destroy(msg);*/
-		server_send_message(skt,answer, strlen(answer));
+	}
+	strcpy(answer,hex);
+	strcat(answer,RESPONSE);
+	/*dbusmessage_destroy(msg);*/
+	server_send_message(skt,answer, strlen(answer));
     } while (received>0);
     return 0;
 }
