@@ -62,20 +62,13 @@ int socket_send_message(socket_t *self, char *buf, size_t size) {
 
 	while (sent < size && is_the_socket_valid) {
 		s = send(self->skt, buf+sent, size-sent, MSG_NOSIGNAL);
-		if (s == 0) {
-			is_the_socket_valid = false;
-		} else if (s < 0) {
+		if (s <= 0) {
 			is_the_socket_valid = false;
 		} else {
 			sent += s;
 		}
 	}
-
-	if (is_the_socket_valid) {
-		return sent;
-	} else {
-		return -1;
-	}
+	return sent;
 }
 
 int socket_recv_message(socket_t *self, char* buf, size_t size) {
@@ -91,7 +84,6 @@ int socket_recv_message(socket_t *self, char* buf, size_t size) {
 			received += s;
 		}
 	}
-
 	return received;
 }
 
