@@ -15,7 +15,7 @@
 #define BUFFER_SIZE 16
 #define UINT32 4
 
-char RESPONSE[] = "OK\n";
+char RESPONSE[] = ": OK\n";
 
 /* ******************************************************************
  *                IMPLEMENTACION
@@ -62,6 +62,7 @@ int server_recv_message(socket_t* skt){
 	dbusmessage_t* msg;
 	char** args;
 	char hex[7];
+	char answer[9] = "";
 	char buffer1[BUFFER_SIZE];
 	int lHeader, lBody, lPadding, received, i;
 
@@ -104,8 +105,10 @@ int server_recv_message(socket_t* skt){
 				printf("    * %s\n",args[i]);
 			}
 		}
-		/*dbusmessage_destroy(msg);
-		server_send_message(skt,RESPONSE, strlen(RESPONSE));*/
+		strcpy(answer,hex);
+		strcat(answer,RESPONSE);
+		/*dbusmessage_destroy(msg);*/
+		server_send_message(skt,answer, strlen(answer));
     } while (received>0);
     return 0;
 }
