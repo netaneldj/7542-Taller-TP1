@@ -15,7 +15,11 @@
 #define BUFFER_SIZE 16
 #define UINT32 4
 
+<<<<<<< Upstream, based on origin/master
 char RESPONSE[] = ": OK\n";
+=======
+char RESPONSE[] = "OK\n";
+>>>>>>> 5606947 Actualizacion formato impresion por pantalla server
 
 /* ******************************************************************
  *                IMPLEMENTACION
