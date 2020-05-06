@@ -10,7 +10,7 @@
 #include "common_dbusmessage.h"
 
 #define BUFFER_SIZE 32
-#define RECV_MSG_SIZE 9
+#define RECV_MSG_SIZE 8
 
 #define SUCCESS 0
 #define ERROR 1
@@ -93,7 +93,7 @@ int process_text_file(client_t* self, FILE* text_file) {
 				dbusmessage_set_id(msg,msgId);
 				protocolo = dbusmessage_client_get_protocol(msg,line);
 				client_send(self,protocolo,dbusmessage_client_get_len_protocol(msg));
-			    printf("%s",client_recv(self));
+			    	printf("%s\n",client_recv(self));
 				dbusmessage_destroy(msg);
 				vector_destruir(temp);
 				temp = vector_crear(BUFFER_SIZE);
@@ -112,8 +112,7 @@ int process_text_file(client_t* self, FILE* text_file) {
 		dbusmessage_set_id(msg,msgId);
 		protocolo = dbusmessage_client_get_protocol(msg,line);
 		client_send(self,protocolo,dbusmessage_client_get_len_protocol(msg));
-	    /*sprintf(hex,"0x%.4x",(int)dbusmessage_get_id(msg));
-	    printf("%s: %s\n",hex,client_recv(self));*/
+		printf("%s\n",client_recv(self));
 		dbusmessage_destroy(msg);
 		vector_destruir(temp);
 	}
