@@ -18,10 +18,6 @@
 char RESPONSE[] = "OK\n";
 
 /* ******************************************************************
- *                DEFINICION FUNCIONES AUXILIARES
- * *****************************************************************/
-
-/* ******************************************************************
  *                IMPLEMENTACION
  * *****************************************************************/
 
@@ -95,7 +91,7 @@ int server_recv_message(socket_t* skt){
 
     	dbusmessage_server_set_message(msg,protocol,lHeader+lPadding+lBody);
 
-		sprintf(hex,"0x%.4x",(int)dbusmessage_get_id(msg));
+		sprintf(hex,"%.4x",(int)dbusmessage_get_id(msg));
 		printf("* Id: %s\n",hex);
 		printf("* Destino: %s\n",dbusmessage_server_get_destination(msg));
 		printf("* Path: %s\n",dbusmessage_server_get_path(msg));
@@ -105,7 +101,7 @@ int server_recv_message(socket_t* skt){
 			printf("* Parámetros:\n");
 			args = dbusmessage_server_get_args(msg);
 			for(int i=0;i<dbusmessage_server_get_cant_args(msg);i++){
-				printf("	* %s\n",args[i]);
+				printf("    * %s\n",args[i]);
 			}
 		}
 		/*dbusmessage_destroy(msg);
