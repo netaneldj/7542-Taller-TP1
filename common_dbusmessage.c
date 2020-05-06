@@ -39,7 +39,7 @@ void int_to_uint32(long int num, char* res);
 //Convierte de hexadecimal de 4 bytes a entero
 int uint32_to_int(char* uint32);
 //Devuelve una nueva cadena reemplazando las ocurrencias de la palabra anterior con la nueva
-char* replace_word(const char* string, const char *oldWord, const char *newWord);
+char* replace_word(char* string, char *oldWord, char *newWord);
 //Devuelve la cantidad de elementos existentes en el split de la cadena param con el delimitador delim(client)
 int get_cant_split(char* param, const char* delim);
 //Escribe el mensaje unificado a retornar con el header y el body(client)
@@ -173,7 +173,7 @@ size_t dbusmessage_server_get_cant_args(dbusmessage_t* self){
 int process_msg_args(dbusmessage_t* self){
 	int pos = self->lMsg-self->lBody;
 	int len;
-	int i=0;
+	int i = 0;
 
 	while(pos<self->lMsg){
 		len = get_msg_int(self,pos,pos+4);
@@ -191,7 +191,7 @@ int process_msg_args(dbusmessage_t* self){
 int process_msg_parameters(dbusmessage_t* self){
 	int pos = 16;
 	int tipo, len, padding;
-	char byte[3];
+	char byte[3] = "";
 
 	while (pos<self->lHeader) {
 		sprintf(byte,"%02hhX",self->msg[pos]);
@@ -246,8 +246,8 @@ int process_msg_parameters(dbusmessage_t* self){
 }
 
 int get_protocol_int(char* protocol,int start, int finish){
-	char string[UINT32+1];
-	char c[3];
+	char string[UINT32+1] = "";
+	char c[3] = "";
 
 	for (int i=start;i<finish;i++) {
 		sprintf(c,"%02hhX",protocol[i]);
@@ -257,8 +257,8 @@ int get_protocol_int(char* protocol,int start, int finish){
 }
 
 int get_msg_int(dbusmessage_t* self,int start, int finish){
-	char string[UINT32] = "";
-	char c[3];
+	char string[UINT32+1] = "";
+	char c[3] = "";
 
 	for (int i=start;i<finish;i++) {
 		sprintf(c,"%02hhX",self->msg[i]);
@@ -311,8 +311,8 @@ int get_cant_split(char* param, const char* delim){
 	return count;
 }
 
-char* replace_word(const char* string, const char *oldWord, const char *newWord) {
-	char *result;
+char* replace_word(char* string, char *oldWord, char *newWord) {
+	char *result = NULL;
     int i, count = 0;
     int newWlen = strlen(newWord);
     int oldWlen = strlen(oldWord);
