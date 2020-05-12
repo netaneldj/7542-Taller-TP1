@@ -21,8 +21,8 @@ typedef struct {
 	char* interface;
 	char* method;
 	char** args;
-	vector_t* header;
-	vector_t* body;
+	vector_t header;
+	vector_t body;
 	size_t lMsg;
 	size_t lHeader;
 	size_t lBody;
@@ -35,15 +35,15 @@ typedef struct {
 
 // Pre: Crea un mensaje.
 // Post: devuelve un mensaje nuevo.
-dbusmessage_t* dbusmessage_create();
+void dbusmessage_create(dbusmessage_t* self);
 
 // Pre: el mensaje fue creado.
 // Post: se eliminaron todos los componentes del mensaje.
-int dbusmessage_destroy(dbusmessage_t* self);
+void dbusmessage_destroy(dbusmessage_t* self);
 
 // Pre: el mensaje fue creado.
 // Post: setea el id.
-int dbusmessage_set_id(dbusmessage_t* self, int id);
+void dbusmessage_set_id(dbusmessage_t* self, int id);
 
 // Pre: el mensaje fue creado.
 // Post: devuelve el id.

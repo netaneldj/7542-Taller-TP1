@@ -4,18 +4,18 @@
 #include "common_socket.h"
 
 typedef struct server {
-    socket_t* socket;
+    socket_t socket;
 } server_t;
 
 /**
  * Constructor
  */
-server_t* server_create();
+void server_create(server_t* self);
 
 /**
  * Destructor
  */
-int server_destroy(server_t* self);
+void server_destroy(server_t* self);
 
 /**
  * Inicia el servidor en el puerto `service`, escucha un

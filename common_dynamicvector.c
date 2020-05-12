@@ -1,8 +1,16 @@
 #include "common_dynamicvector.h"
 
+/* ******************************************************************
+ *                DEFINICION FUNCIONES AUXILIARES
+ * *****************************************************************/
+// Cambia el tamaño del vector
+static bool vector_redimensionar(vector_t* vector, size_t nueva_cap);
+
+/* ******************************************************************
+ *                IMPLEMENTACION
+ * *****************************************************************/
 void vector_destruir(vector_t* vector){
 	free(vector->datos);
-	free(vector);
 }
 
 bool vector_obtener(vector_t* vector, size_t pos, char* valor){
@@ -45,24 +53,21 @@ size_t vector_obtener_cantidad(vector_t* vector){
 	return vector->cantidad;
 }
 
-vector_t* vector_crear(size_t capacidad) {
-    vector_t* vector = malloc(sizeof(vector_t));
+void vector_crear(vector_t* self, size_t capacidad) {
+    self->datos = malloc(capacidad * sizeof(char));
 
-    if (vector == NULL) {
-        return NULL;
+    if (capacidad > 0 && self->datos == NULL) {
+        free(self->datos);
+        exit(1);
     }
-    vector->datos = malloc(capacidad * sizeof(char));
-
-    if (capacidad > 0 && vector->datos == NULL) {
-        free(vector);
-        return NULL;
-    }
-    vector->capacidad = capacidad;
-    vector->cantidad = 0;
-    return vector;
+    self->capacidad = capacidad;
+    self->cantidad = 0;
 }
 
-bool vector_redimensionar(vector_t* vector, size_t nueva_cap) {
+/* ******************************************************************
+ *                IMPLEMENTACIONES AUXILIARES
+ * *****************************************************************/
+static bool vector_redimensionar(vector_t* vector, size_t nueva_cap) {
     char* datos_nuevo = realloc(vector->datos, nueva_cap * sizeof(char));
 
     // Cuando tam_nuevo es 0, es correcto si se devuelve NULL.

@@ -14,35 +14,48 @@
 #include "common_socket.h"
 
 /* ******************************************************************
+ *                DEFINICION DE LOS TIPOS DE DATOS
+ * *****************************************************************/
+static bool socket_addrinfo(socket_t *self, const char *host, const char* service);
+
+/* ******************************************************************
  *                IMPLEMENTACION
  * *****************************************************************/
 
-socket_t* socket_create() {
-	socket_t* socket = malloc(sizeof(socket_t));
-	if (socket==NULL) return NULL;
-	socket->skt = -1;
-	return socket;
-}
-
-void socket_destroy(socket_t *self) {
+void socket_create(socket_t* self) {
 	self->skt = -1;
-	free(self);
 }
 
-bool socket_connect(socket_t *self, const char* host, const char* service) {
-	struct addrinfo hints, *serv_info;
-	memset(&hints, 0, sizeof(struct addrinfo));
-    // serv_info es una lista enlazada, igualmente me quedo con la primer opción
-    int error = getaddrinfo(host, service, &hints, &serv_info);
-    if (error) {
-        return false;
-    }
-    self->skt = socket(serv_info->ai_family, serv_info->ai_socktype, serv_info->ai_protocol);
-    connect(self->skt, serv_info->ai_addr, serv_info->ai_addrlen);
+void socket_destroy(socket_t* self) {
+	self->skt = -1;
+}
 
-    // libero recursos de getaddrinfo
-    freeaddrinfo(serv_info);
-    return self->skt!=-1;
+bool socket_connect(socket_t* self, const char* host, const char* service) {
+	bool are_we_connected = false;
+
+	if (!socket_addrinfo(self,host,service)) {
+		socket_destroy(self);
+		return are_we_connected;
+	}
+
+   	for (self->ptr = self->addrinfo; self->ptr!=NULL && !are_we_connected; self->ptr=self->ptr->ai_next) {
+   		self->skt = socket(self->ptr->ai_family, self->ptr->ai_socktype, self->ptr->ai_protocol);
+      	if (self->skt == -1) {
+      		printf("Error: %s\n", strerror(errno));
+      	} else {
+      		self->s = connect(self->skt, self->ptr->ai_addr, self->ptr->ai_addrlen);
+      		if (self->s == -1) {
+			printf("Error: %s\n", strerror(errno));
+			close(self->skt);
+      		}
+      		are_we_connected = (self->s != -1);
+      }
+    }
+   	freeaddrinfo(self->addrinfo);
+	if (are_we_connected == false) {
+		return false;
+	}
+	return true;
 }
 
 int socket_close(socket_t* self) {
@@ -51,7 +64,7 @@ int socket_close(socket_t* self) {
 	return 0;
 }
 
-int socket_send_message(socket_t *self, char *buf, size_t size) {
+int socket_send_message(socket_t* self, char *buf, size_t size) {
     /**
      * MSG_NOSIGNAL para evitar que salte una señal en caso
      * de que el socket se haya cerrado
@@ -71,7 +84,7 @@ int socket_send_message(socket_t *self, char *buf, size_t size) {
 	return sent;
 }
 
-int socket_recv_message(socket_t *self, char* buf, size_t size) {
+int socket_recv_message(socket_t* self, char* buf, size_t size) {
 	int received = 0;
 	int s = 0;
 	bool is_the_socket_valid = true;
@@ -87,31 +100,44 @@ int socket_recv_message(socket_t *self, char* buf, size_t size) {
 	return received;
 }
 
-int socket_bind_listen(socket_t *self, char* port) {
-    // Hints son las opciones que configuro, server info posee los datos
-    // devueltos por el sistema.
+bool socket_bind(socket_t* self, char* port) {
+	bool are_we_binded = false;
 
-    struct addrinfo hints, *server_info;
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = 0;
-    getaddrinfo(NULL, port, &hints, &server_info);
-    self->skt = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
+	if (!socket_addrinfo(self,NULL,port)) {
+		socket_destroy(self);
+		return are_we_binded;
+	}
 
-    // Así se puede reutilizar el puerto sin esperar timeout
-    int val = 1;
-    setsockopt(self->skt, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
-
-    bind(self->skt, server_info->ai_addr, server_info->ai_addrlen);
-
-    freeaddrinfo(server_info);
-    listen(self->skt, ACCEPT_QUEUE_LEN);
-
-    return 0;
+   	for (self->ptr = self->addrinfo; self->ptr!=NULL && !are_we_binded; self->ptr=self->ptr->ai_next) {
+   		self->skt = socket(self->ptr->ai_family, self->ptr->ai_socktype, self->ptr->ai_protocol);
+      	if (self->skt == -1) {
+      		printf("Error: %s\n", strerror(errno));
+      	} else {
+      		self->s = bind(self->skt, self->addrinfo->ai_addr, self->addrinfo->ai_addrlen);
+      		if (self->s == -1) {
+			printf("Error: %s\n", strerror(errno));
+			close(self->skt);
+      		}
+      		are_we_binded = (self->s != -1);
+      }
+    }
+   	freeaddrinfo(self->addrinfo);
+	if (are_we_binded == false) {
+		return false;
+	}
+	return true;
 }
 
-int socket_accept(socket_t *self, socket_t* skt_c) {
+bool socket_listen(socket_t* self) {
+    self->s = listen(self->skt, ACCEPT_QUEUE_LEN);
+    if (self->s == -1) {
+        socket_destroy(self);
+        return false;
+    }
+    return true;
+}
+
+int socket_accept(socket_t* self, socket_t* skt_c) {
     char addressBuf[INET_ADDRSTRLEN];
     struct sockaddr_in address;
     socklen_t addressLength = (socklen_t) sizeof(address);
@@ -125,4 +151,17 @@ int socket_accept(socket_t *self, socket_t* skt_c) {
 /* ******************************************************************
  *                IMPLEMENTACIONES AUXILIARES
  * *****************************************************************/
+static bool socket_addrinfo(socket_t* self,const char *host, const char* service){
+	struct addrinfo hints;
 
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = 0;
+	self->s = getaddrinfo(host, service, &hints, &self->addrinfo);
+   	if (self->s != 0) {
+      		printf("Error in getaddrinfo: %s\n", gai_strerror(self->skt));
+      		return false;
+   	}
+   	return true;
+}

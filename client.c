@@ -25,9 +25,10 @@ int main(int argc, char** argv) {
     } else {
 		const char* host = argv[ARGS_HOST];
 		const char* service = argv[ARGS_PORT];
-		client_t* client = client_create();
-		client_run(client, host, service, input);
-		client_destroy(client);
+		client_t client;
+		client_create(&client);
+		client_run(&client, host, service, input);
+		client_destroy(&client);
 		if (input != stdin)
 			fclose(input);
 		return SUCCESS;
