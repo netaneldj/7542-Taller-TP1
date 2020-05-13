@@ -16,7 +16,7 @@
 /* ******************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
  * *****************************************************************/
-static bool socket_addrinfo(socket_t *self, const char *host, const char* service);
+static bool socket_addrinfo(socket_t *self, char *host, char* service);
 
 /* ******************************************************************
  *                IMPLEMENTACION
@@ -30,7 +30,7 @@ void socket_destroy(socket_t* self) {
 	self->skt = -1;
 }
 
-bool socket_connect(socket_t* self, const char* host, const char* service) {
+bool socket_connect(socket_t* self, char* host, char* service) {
 	bool are_we_connected = false;
 
 	if (!socket_addrinfo(self,host,service)) {
@@ -38,8 +38,10 @@ bool socket_connect(socket_t* self, const char* host, const char* service) {
 		return are_we_connected;
 	}
 
-   	for (self->ptr = self->addrinfo; self->ptr!=NULL && !are_we_connected; self->ptr=self->ptr->ai_next) {
-   		self->skt = socket(self->ptr->ai_family, self->ptr->ai_socktype, self->ptr->ai_protocol);
+   	for (self->ptr = self->addrinfo; self->ptr!=NULL &&
+   		 !are_we_connected; self->ptr=self->ptr->ai_next) {
+   		self->skt = socket(self->ptr->ai_family, self->ptr->ai_socktype,
+   						   self->ptr->ai_protocol);
       	if (self->skt == -1) {
       		printf("Error: %s\n", strerror(errno));
       	} else {
@@ -108,12 +110,15 @@ bool socket_bind(socket_t* self, char* port) {
 		return are_we_binded;
 	}
 
-   	for (self->ptr = self->addrinfo; self->ptr!=NULL && !are_we_binded; self->ptr=self->ptr->ai_next) {
-   		self->skt = socket(self->ptr->ai_family, self->ptr->ai_socktype, self->ptr->ai_protocol);
+   	for (self->ptr = self->addrinfo; self->ptr!=NULL &&
+   		 !are_we_binded; self->ptr=self->ptr->ai_next) {
+   		self->skt = socket(self->ptr->ai_family, self->ptr->ai_socktype,
+   						   self->ptr->ai_protocol);
       	if (self->skt == -1) {
       		printf("Error: %s\n", strerror(errno));
       	} else {
-      		self->s = bind(self->skt, self->addrinfo->ai_addr, self->addrinfo->ai_addrlen);
+      		self->s = bind(self->skt, self->addrinfo->ai_addr,
+      					   self->addrinfo->ai_addrlen);
       		if (self->s == -1) {
 			printf("Error: %s\n", strerror(errno));
 			close(self->skt);
@@ -151,7 +156,7 @@ int socket_accept(socket_t* self, socket_t* skt_c) {
 /* ******************************************************************
  *                IMPLEMENTACIONES AUXILIARES
  * *****************************************************************/
-static bool socket_addrinfo(socket_t* self,const char *host, const char* service){
+static bool socket_addrinfo(socket_t* self, char *host, char* service){
 	struct addrinfo hints;
 
 	memset(&hints, 0, sizeof(struct addrinfo));

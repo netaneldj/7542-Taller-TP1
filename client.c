@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
     if (!input) {
         return ERROR;
     } else {
-		const char* host = argv[ARGS_HOST];
-		const char* service = argv[ARGS_PORT];
+		char* host = argv[ARGS_HOST];
+		char* service = argv[ARGS_PORT];
 		client_t client;
 		client_create(&client);
 		client_run(&client, host, service, input);

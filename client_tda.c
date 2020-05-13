@@ -9,7 +9,7 @@
 #include "common_dbusmessage.h"
 
 #define BUFFER_SIZE 32
-#define RECV_MSG_SIZE 8
+#define RECV_MSG_SIZE 14
 
 #define SUCCESS 0
 #define ERROR 1
@@ -20,7 +20,7 @@
 
 static void process_text_file(client_t* self, FILE* text_file);
 static void process_text_line(client_t* self, vector_t* temp, int msgId);
-static void client_communication(client_t* self, char* protocol, dbusmessage_t* msg);
+static void client_comm(client_t* self, char* protocol, dbusmessage_t* msg);
 
 /* ******************************************************************
  *                IMPLEMENTACION
@@ -34,15 +34,12 @@ void client_destroy(client_t* self) {
     socket_destroy(&self->socket);
 }
 
-int client_run(client_t* self, const char* host, const char* service, FILE *text_file) {
-
+int client_run(client_t* self, char* host, char* service, FILE *text_file) {
     if (!socket_connect(&self->socket, host, service)) {
         printf("No se pudo conectar al servidor");
         return 1;
     }
-
     process_text_file(self, text_file);
-    
     socket_close(&self->socket);
     return 0;
 }
@@ -69,7 +66,7 @@ static void process_text_file(client_t* self, FILE* text_file) {
 	vector_crear(&temp, BUFFER_SIZE);
 	while (!feof(text_file)){
 		bytes = fread(buffer, 1, BUFFER_SIZE, text_file);
-		for (int i=0;i<bytes;i++){
+		for (int i=0; i<bytes; i++){
 			if(buffer[i]=='\n'){
 				process_text_line(self, &temp, msgId);
 				vector_destruir(&temp);
@@ -88,17 +85,17 @@ static void process_text_line(client_t* self, vector_t* temp, int msgId){
 
 	char line[vector_obtener_cantidad(temp)];
 	memset(line, 0, vector_obtener_cantidad(temp)*sizeof(char));
-	for (int j=0;j<vector_obtener_cantidad(temp);j++) {
+	for (int j=0; j<vector_obtener_cantidad(temp); j++) {
 		vector_obtener(temp,j,&line[j]);
 	}
 	dbusmessage_create(&msg);
 	dbusmessage_set_id(&msg,msgId);
 	protocolo = dbusmessage_client_get_protocol(&msg,line);
-	client_communication(self,protocolo,&msg);
+	client_comm(self,protocolo,&msg);
 	dbusmessage_destroy(&msg);
 }
 
-static void client_communication(client_t* self, char* protocol, dbusmessage_t* msg){
+static void client_comm(client_t* self, char* protocol, dbusmessage_t* msg){
 	char response[RECV_MSG_SIZE];
 
 	client_send(self,protocol,dbusmessage_client_get_len_protocol(msg));

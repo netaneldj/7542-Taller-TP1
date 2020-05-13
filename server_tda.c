@@ -63,8 +63,9 @@ int server_recv_message(socket_t* skt){
 	dbusmessage_t msg;
 	char** args = NULL;
 	int id = -1;
-	char hex[5] = "";
-	char answer[9] = "";
+	int buffer2Size = 0;
+	char hex[11] = "";
+	char answer[15] = "";
 	char buffer1[BUFFER_SIZE];
 	int lHeader, lBody, lPadding, received, i;
 
@@ -76,15 +77,18 @@ int server_recv_message(socket_t* skt){
 
     	dbusmessage_create(&msg);
 
-    	char buffer2[lHeader+lPadding+lBody-BUFFER_SIZE];
-    	char protocol[lHeader+lPadding+lBody];
-    	received = socket_recv_message(skt,buffer2,lHeader+lPadding+lBody-BUFFER_SIZE);
+    	buffer2Size = lHeader+lPadding+lBody-BUFFER_SIZE;
 
-    	for(i=0;i<BUFFER_SIZE;i++){
+    	char buffer2[buffer2Size];
+    	char protocol[lHeader+lPadding+lBody];
+
+    	received = socket_recv_message(skt,buffer2,buffer2Size);
+
+    	for(i=0; i<BUFFER_SIZE; i++){
     		protocol[i] = buffer1[i];
     	}
 
-    	for(int j=0;j<lHeader+lPadding+lBody-BUFFER_SIZE;j++){
+    	for(int j=0; j<buffer2Size; j++){
     		protocol[i] = buffer2[j];
     		i++;
     	}
@@ -93,20 +97,20 @@ int server_recv_message(socket_t* skt){
     	if (id>=(int)dbusmessage_get_id(&msg)) return 1;
     	id = (int)dbusmessage_get_id(&msg);
 
-		sprintf(hex,"%.4x",(int)dbusmessage_get_id(&msg));
+		snprintf(hex,sizeof(hex),"0x%.8x",(int)dbusmessage_get_id(&msg));
 		printf("* Id: %s\n",hex);
 		printf("* Destino: %s\n",dbusmessage_server_get_destination(&msg));
-		printf("* Path: %s\n",dbusmessage_server_get_path(&msg));
+		printf("* Ruta: %s\n",dbusmessage_server_get_path(&msg));
 		printf("* Interfaz: %s\n",dbusmessage_server_get_interface(&msg));
 		printf("* Metodo: %s\n",dbusmessage_server_get_method(&msg));
 		if (dbusmessage_server_get_cant_args(&msg)>0) {
 			printf("* Parámetros:\n");
 			args = dbusmessage_server_get_args(&msg);
-			for(int i=0;i<dbusmessage_server_get_cant_args(&msg);i++){
+			for(int i=0; i<dbusmessage_server_get_cant_args(&msg); i++){
 				printf("    * %s\n",args[i]);
 			}
 		}
-		snprintf(answer,9,"%s%s",hex,RESPONSE);
+		snprintf(answer,sizeof(answer),"%s%s",hex,RESPONSE);
 		server_send_message(skt,answer, strlen(answer));
     } while (received>0);
     return 0;

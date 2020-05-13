@@ -107,9 +107,11 @@ size_t dbusmessage_server_get_cant_args(dbusmessage_t* self);
 /* ******************************************************************
  *                    FUNCIONES AUXILIARES
  * *****************************************************************/
-//Devuelve el valor entero del protocolo que se encuentra entre start y finish(server)
+//Devuelve el valor entero del protocolo que se encuentra
+//entre start y finish(server)
 int get_protocol_int(char* protocol,int start, int finish);
-//Devuelve la cantidad de padding existente en el header a partir de la posición pos(server)
+//Devuelve la cantidad de padding existente en el header
+//a partir de la posición pos(server)
 int get_padding(int pos);
 
 #endif /* COMMON_DBUSMESSAGE_H_ */
