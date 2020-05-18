@@ -112,8 +112,7 @@ int process_text_file(client_t* self, FILE* text_file) {
 		dbusmessage_set_id(msg,msgId);
 		protocolo = dbusmessage_client_get_protocol(msg,line);
 		client_send(self,protocolo,dbusmessage_client_get_len_protocol(msg));
-	    /*sprintf(hex,"0x%.4x",(int)dbusmessage_get_id(msg));
-	    printf("%s: %s\n",hex,client_recv(self));*/
+		printf("%s\n",client_recv(self));
 		dbusmessage_destroy(msg);
 		vector_destruir(temp);
 	}

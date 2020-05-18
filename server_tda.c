@@ -104,7 +104,6 @@ int server_recv_message(socket_t* skt){
 			for(int i=0;i<dbusmessage_server_get_cant_args(msg);i++){
 				printf("    * %s\n",args[i]);
 			}
-		}
 		strcpy(answer,hex);
 		strcat(answer,RESPONSE);
 		/*dbusmessage_destroy(msg);*/

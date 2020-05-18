@@ -79,6 +79,11 @@ El Cliente es el encargado de recibir por consola o por parametro las instruccio
 
 El Servidor es el encargado de recibir la información del cliente, traducirla y obtener la información de su interes para luego mostarla por pantalla. Luego de recibirla debe notificarle la recepción al cliente. Para realizar la conversión al formato del protocolo utiliza al Mensaje DBUS y para la comunicación Socket.
 
+Diagrama ilustrativo
+------------------------
+
+![\[fig:class01\]Proceso de Envio y Recepción de Mensajes](img/diagrama_secuencia_cliente_servidor.png)
+
 Dificultades abordadas
 ------------------------
 
