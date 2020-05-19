@@ -104,12 +104,13 @@ int server_recv_message(socket_t* skt){
 		printf("* Interfaz: %s\n",dbusmessage_server_get_interface(&msg));
 		printf("* Metodo: %s\n",dbusmessage_server_get_method(&msg));
 		if (dbusmessage_server_get_cant_args(&msg)>0) {
-			printf("* Parámetros:\n");
+			printf("* Parametros:\n");
 			args = dbusmessage_server_get_args(&msg);
 			for(int i=0; i<dbusmessage_server_get_cant_args(&msg); i++){
 				printf("    * %s\n",args[i]);
 			}
 		}
+		printf("\n");
 		snprintf(answer,sizeof(answer),"%s%s",hex,RESPONSE);
 		server_send_message(skt,answer, strlen(answer));
     } while (received>0);
