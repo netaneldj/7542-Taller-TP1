@@ -60,19 +60,12 @@ int server_send_message(socket_t* skt, char* msg, size_t len) {
 }
 
 int server_recv_message(socket_t* skt){
-<<<<<<< HEAD
-	dbusmessage_t* msg;
-	char** args;
-	char hex[7] = "";
-	char answer[9] = "";
-=======
 	dbusmessage_t msg;
 	char** args = NULL;
 	int id = -1;
 	int buffer2Size = 0;
 	char hex[11] = "";
 	char answer[15] = "";
->>>>>>> branch 'master' of https://github.com/netaneldj/tp1.git
 	char buffer1[BUFFER_SIZE];
 	int lHeader, lBody, lPadding, received, i;
 
@@ -82,11 +75,7 @@ int server_recv_message(socket_t* skt){
     	lHeader = get_protocol_int(buffer1,12,16);
     	lPadding = get_padding(lHeader);
 
-<<<<<<< HEAD
-    	if (lHeader==0) return -1;
-=======
     	dbusmessage_create(&msg);
->>>>>>> branch 'master' of https://github.com/netaneldj/tp1.git
 
     	buffer2Size = lHeader+lPadding+lBody-BUFFER_SIZE;
 
@@ -104,25 +93,6 @@ int server_recv_message(socket_t* skt){
     		i++;
     	}
 
-<<<<<<< HEAD
-    	dbusmessage_server_set_message(msg,protocol,lHeader+lPadding+lBody);
-
-		sprintf(hex,"%.4x",(int)dbusmessage_get_id(msg));
-		printf("* Id: %s\n",hex);
-		printf("* Destino: %s\n",dbusmessage_server_get_destination(msg));
-		printf("* Path: %s\n",dbusmessage_server_get_path(msg));
-		printf("* Interfaz: %s\n",dbusmessage_server_get_interface(msg));
-		printf("* Metodo: %s\n",dbusmessage_server_get_method(msg));
-		if (dbusmessage_server_get_cant_args(msg)>0) {
-			printf("* Parámetros:\n");
-			args = dbusmessage_server_get_args(msg);
-			for(int i=0;i<dbusmessage_server_get_cant_args(msg);i++){
-				printf("    * %s\n",args[i]);
-			}
-		strcpy(answer,hex);
-		strcat(answer,RESPONSE);
-		/*dbusmessage_destroy(msg);*/
-=======
     	dbusmessage_server_set_message(&msg,protocol,lHeader+lPadding+lBody);
     	if (id>=(int)dbusmessage_get_id(&msg)) return 1;
     	id = (int)dbusmessage_get_id(&msg);
@@ -141,8 +111,8 @@ int server_recv_message(socket_t* skt){
 			}
 		}
 		snprintf(answer,sizeof(answer),"%s%s",hex,RESPONSE);
->>>>>>> branch 'master' of https://github.com/netaneldj/tp1.git
 		server_send_message(skt,answer, strlen(answer));
     } while (received>0);
+    dbusmessage_destroy(&msg);
     return 0;
 }

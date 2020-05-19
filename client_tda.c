@@ -68,24 +68,9 @@ static void process_text_file(client_t* self, FILE* text_file) {
 		bytes = fread(buffer, 1, BUFFER_SIZE, text_file);
 		for (int i=0; i<bytes; i++){
 			if(buffer[i]=='\n'){
-<<<<<<< HEAD
-				char line[vector_obtener_cantidad(temp)];
-				for (int j=0;j<vector_obtener_cantidad(temp);j++) {
-					vector_obtener(temp,j,&line[j]);
-				}
-				msg = dbusmessage_create();
-				dbusmessage_set_id(msg,msgId);
-				protocolo = dbusmessage_client_get_protocol(msg,line);
-				client_send(self,protocolo,dbusmessage_client_get_len_protocol(msg));
-			    printf("%s\n",client_recv(self));
-				dbusmessage_destroy(msg);
-				vector_destruir(temp);
-				temp = vector_crear(BUFFER_SIZE);
-=======
 				process_text_line(self, &temp, msgId);
 				vector_destruir(&temp);
 				vector_crear(&temp,BUFFER_SIZE);
->>>>>>> branch 'master' of https://github.com/netaneldj/tp1.git
 				msgId++;
 				continue;
 			}
