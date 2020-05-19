@@ -41,7 +41,7 @@ static void int_to_uint32(long int num, char* res);
 static int uint32_to_int(char* uint32);
 //Devuelve una nueva cadena reemplazando las ocurrencias
 //de la palabra anterior con la nueva
-static char* replace_word(char* string, char *oldWord, char *newWord);
+static char* replace_word(char* text, char *oldWord, char *newWord);
 //Devuelve la cantidad de elementos existentes en el split
 //de la cadena param con el delimitador delim(client)
 static int get_cant_split(char* param, char delim);
@@ -312,14 +312,14 @@ static int get_cant_split(char* param, char delim){
 	return count;
 }
 
-static char* replace_word(char* string, char *oldWord, char *newWord) {
+static char* replace_word(char* text, char *oldWord, char *newWord) {
 	char *result = NULL;
     int i, count = 0;
     int newWlen = strlen(newWord);
     int oldWlen = strlen(oldWord);
 
-    for (i = 0; string[i] != '\0'; i++) {
-        if (strstr(&string[i], oldWord) == &string[i]) {
+    for (i = 0; text[i] != '\0'; i++) {
+        if (strstr(&text[i], oldWord) == &text[i]) {
             count++;
             i += oldWlen - 1;
         }
@@ -327,13 +327,13 @@ static char* replace_word(char* string, char *oldWord, char *newWord) {
 
     result = (char *)malloc(i + count * (newWlen - oldWlen) + 1);
     i = 0;
-    while (*string) {
-        if (strstr(string, oldWord) == string) {
+    while (*text) {
+        if (strstr(text, oldWord) == text) {
             strcpy(&result[i], newWord);
             i += newWlen;
-            string += oldWlen;
+            text += oldWlen;
         } else {
-            result[i++] = *string++;
+            result[i++] = *text++;
         }
     }
 
@@ -488,7 +488,8 @@ static void set_protocol_process_input(dbusmessage_t* self, char* input) {
 	}
 }
 
-static void set_protocol_param_const(vector_t* self,int id, int cnt, char type) {
+static void set_protocol_param_const(vector_t* self,
+		int id, int cnt, char type) {
    vector_agregar(self,id);//id param
    vector_agregar(self,cnt);//un string
    vector_agregar(self,type);//tipo de dato
@@ -536,7 +537,7 @@ static void set_protocol_uint32(vector_t* self, int num) {
 	char aux[3];
 
 	int_to_uint32(num,num32);
-	for (int i=0;i<UINT32;i+=2) {
+	for (int i=0; i<UINT32; i+=2) {
 		snprintf(aux,sizeof(aux),"%c%c",num32[i],num32[i+1]);
 		vector_agregar(self,(int)strtol(aux, NULL, 16));
 	}

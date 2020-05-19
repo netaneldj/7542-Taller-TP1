@@ -12,7 +12,7 @@
 int main(int argc, char** argv) {
     FILE* input;
 	if (argc < 3) {
-        printf("Uso: ./client <host> <puerto>");
+        printf("Uso: ./client <host> <puerto>\n");
         return ERROR;
     }
     if (argc > 3) {
