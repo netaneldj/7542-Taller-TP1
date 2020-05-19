@@ -10,7 +10,8 @@ int main(int argc, char** argv) {
     return 1;
     }
     char* service = argv[ARGS_PORT];
-    server_t* server = server_create();
-    server_run(server, service);
-    server_destroy(server);
+    server_t server;
+    server_create(&server);
+    server_run(&server, service);
+    server_destroy(&server);
 }

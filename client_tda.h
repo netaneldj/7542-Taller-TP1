@@ -4,29 +4,29 @@
 #include "common_socket.h"
 
 typedef struct client {
-    socket_t* socket;
+    socket_t socket;
 } client_t;
 
 /**
  * Constructor
  */
-client_t* client_create();
+void client_create(client_t* self);
 
 /**
  * Destructor
  */
-int client_destroy(client_t* self);
+void client_destroy(client_t* self);
 
 /**
  * Se conecta a un servidor con la dirección dada por <host> y <service>
  * Envía el mensaje leido por consola o por archivo al servidor y luego espera su respuesta.
  */
-int client_run(client_t* self, const char* host, const char* service, FILE *text_file);
+int client_run(client_t* self, char* host, char* service, FILE *text_file);
 
 /**
  * Envía el mensaje "Hello client"
  */
-char* client_recv(client_t* self);
+void client_recv(client_t* self, char* response);
 
 /**
  * Envía el mensaje

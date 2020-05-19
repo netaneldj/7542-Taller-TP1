@@ -1,5 +1,4 @@
 
-#define _POSIX_C_SOURCE 201112L // Habilita getaddrinfo
 #include <unistd.h>
 #include <arpa/inet.h> // inet_ntop
 #include <sys/socket.h>
@@ -21,36 +20,38 @@ char RESPONSE[] = ": OK";
  *                IMPLEMENTACION
  * *****************************************************************/
 
-server_t* server_create() {
-	server_t* server = malloc(sizeof(server_t));
-	if (server==NULL) return NULL;
-	server->socket = socket_create();
-	if (server->socket==NULL) return NULL;
-    return server;
+void server_create(server_t* self) {
+	socket_create(&self->socket);
 }
 
-int server_destroy(server_t* self) {
-    socket_destroy(self->socket);
-    free(self);
-    return 0;
+void server_destroy(server_t* self) {
+    socket_destroy(&self->socket);
 }
 
 int server_run(server_t* self, char* service) {
-	if (socket_bind_listen(self->socket, service)) {
+	socket_t skt_a;
+
+	if (!socket_bind(&self->socket, service)) {
         printf("No se pudo tomar el puerto");
+        socket_close(&self->socket);
+        return 1;
+    }
+	if (!socket_listen(&self->socket)) {
+        printf("No se pudo escuchar el puerto");
+        socket_close(&self->socket);
         return 1;
     }
 
-	socket_t* skt_a = socket_create();
-    if (socket_accept(self->socket, skt_a)) {
+	socket_create(&skt_a);
+    if (socket_accept(&self->socket, &skt_a)) {
         printf("No se pudo aceptar el cliente");
         return 1;
     }
 
-    server_recv_message(skt_a);
+    server_recv_message(&skt_a);
 
-    socket_close(skt_a);
-    socket_close(self->socket);
+    socket_close(&skt_a);
+    socket_close(&self->socket);
     return 0;
 }
 
@@ -59,10 +60,19 @@ int server_send_message(socket_t* skt, char* msg, size_t len) {
 }
 
 int server_recv_message(socket_t* skt){
+<<<<<<< HEAD
 	dbusmessage_t* msg;
 	char** args;
 	char hex[7] = "";
 	char answer[9] = "";
+=======
+	dbusmessage_t msg;
+	char** args = NULL;
+	int id = -1;
+	int buffer2Size = 0;
+	char hex[11] = "";
+	char answer[15] = "";
+>>>>>>> branch 'master' of https://github.com/netaneldj/tp1.git
 	char buffer1[BUFFER_SIZE];
 	int lHeader, lBody, lPadding, received, i;
 
@@ -72,24 +82,29 @@ int server_recv_message(socket_t* skt){
     	lHeader = get_protocol_int(buffer1,12,16);
     	lPadding = get_padding(lHeader);
 
+<<<<<<< HEAD
     	if (lHeader==0) return -1;
+=======
+    	dbusmessage_create(&msg);
+>>>>>>> branch 'master' of https://github.com/netaneldj/tp1.git
 
-		msg = dbusmessage_create();
-		if (msg==NULL) return -1;
+    	buffer2Size = lHeader+lPadding+lBody-BUFFER_SIZE;
 
-    	char buffer2[lHeader+lPadding+lBody-BUFFER_SIZE];
+    	char buffer2[buffer2Size];
     	char protocol[lHeader+lPadding+lBody];
-    	received = socket_recv_message(skt,buffer2,lHeader+lPadding+lBody-BUFFER_SIZE);
 
-    	for(i=0;i<BUFFER_SIZE;i++){
+    	received = socket_recv_message(skt,buffer2,buffer2Size);
+
+    	for(i=0; i<BUFFER_SIZE; i++){
     		protocol[i] = buffer1[i];
     	}
 
-    	for(int j=0;j<lHeader+lPadding+lBody-BUFFER_SIZE;j++){
+    	for(int j=0; j<buffer2Size; j++){
     		protocol[i] = buffer2[j];
     		i++;
     	}
 
+<<<<<<< HEAD
     	dbusmessage_server_set_message(msg,protocol,lHeader+lPadding+lBody);
 
 		sprintf(hex,"%.4x",(int)dbusmessage_get_id(msg));
@@ -107,6 +122,26 @@ int server_recv_message(socket_t* skt){
 		strcpy(answer,hex);
 		strcat(answer,RESPONSE);
 		/*dbusmessage_destroy(msg);*/
+=======
+    	dbusmessage_server_set_message(&msg,protocol,lHeader+lPadding+lBody);
+    	if (id>=(int)dbusmessage_get_id(&msg)) return 1;
+    	id = (int)dbusmessage_get_id(&msg);
+
+		snprintf(hex,sizeof(hex),"0x%.8x",(int)dbusmessage_get_id(&msg));
+		printf("* Id: %s\n",hex);
+		printf("* Destino: %s\n",dbusmessage_server_get_destination(&msg));
+		printf("* Ruta: %s\n",dbusmessage_server_get_path(&msg));
+		printf("* Interfaz: %s\n",dbusmessage_server_get_interface(&msg));
+		printf("* Metodo: %s\n",dbusmessage_server_get_method(&msg));
+		if (dbusmessage_server_get_cant_args(&msg)>0) {
+			printf("* Parámetros:\n");
+			args = dbusmessage_server_get_args(&msg);
+			for(int i=0; i<dbusmessage_server_get_cant_args(&msg); i++){
+				printf("    * %s\n",args[i]);
+			}
+		}
+		snprintf(answer,sizeof(answer),"%s%s",hex,RESPONSE);
+>>>>>>> branch 'master' of https://github.com/netaneldj/tp1.git
 		server_send_message(skt,answer, strlen(answer));
     } while (received>0);
     return 0;

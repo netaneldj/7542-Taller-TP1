@@ -21,8 +21,8 @@ typedef struct {
 	char* interface;
 	char* method;
 	char** args;
-	vector_t* header;
-	vector_t* body;
+	vector_t header;
+	vector_t body;
 	size_t lMsg;
 	size_t lHeader;
 	size_t lBody;
@@ -35,15 +35,15 @@ typedef struct {
 
 // Pre: Crea un mensaje.
 // Post: devuelve un mensaje nuevo.
-dbusmessage_t* dbusmessage_create();
+void dbusmessage_create(dbusmessage_t* self);
 
 // Pre: el mensaje fue creado.
 // Post: se eliminaron todos los componentes del mensaje.
-int dbusmessage_destroy(dbusmessage_t* self);
+void dbusmessage_destroy(dbusmessage_t* self);
 
 // Pre: el mensaje fue creado.
 // Post: setea el id.
-int dbusmessage_set_id(dbusmessage_t* self, int id);
+void dbusmessage_set_id(dbusmessage_t* self, int id);
 
 // Pre: el mensaje fue creado.
 // Post: devuelve el id.
@@ -107,9 +107,11 @@ size_t dbusmessage_server_get_cant_args(dbusmessage_t* self);
 /* ******************************************************************
  *                    FUNCIONES AUXILIARES
  * *****************************************************************/
-//Devuelve el valor entero del protocolo que se encuentra entre start y finish(server)
+//Devuelve el valor entero del protocolo que se encuentra
+//entre start y finish(server)
 int get_protocol_int(char* protocol,int start, int finish);
-//Devuelve la cantidad de padding existente en el header a partir de la posición pos(server)
+//Devuelve la cantidad de padding existente en el header
+//a partir de la posición pos(server)
 int get_padding(int pos);
 
 #endif /* COMMON_DBUSMESSAGE_H_ */
