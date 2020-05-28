@@ -147,7 +147,7 @@ int socket_accept(socket_t* self, socket_t* skt_c) {
     struct sockaddr_in address;
     socklen_t addressLength = (socklen_t) sizeof(address);
 
-    int newSocket = accept(self->skt,(struct sockaddr *)&address,&addressLength);
+    int newSocket = accept(self->skt, (struct sockaddr *)&address,&addressLength);
     inet_ntop(AF_INET, &(address.sin_addr), addressBuf, INET_ADDRSTRLEN);
     skt_c->skt = newSocket;
     return 0;

@@ -10,7 +10,7 @@ static bool vector_redimensionar(vector_t* vector, size_t nueva_cap);
  *                IMPLEMENTACION
  * *****************************************************************/
 void vector_destruir(vector_t* vector){
-	free(vector->datos);
+	if (vector->datos!=NULL) free(vector->datos);
 }
 
 bool vector_obtener(vector_t* vector, size_t pos, char* valor){

@@ -75,8 +75,6 @@ int server_recv_message(socket_t* skt){
     	lHeader = get_protocol_int(buffer1,12,16);
     	lPadding = get_padding(lHeader);
 
-    	dbusmessage_create(&msg);
-
     	buffer2Size = lHeader+lPadding+lBody-BUFFER_SIZE;
 
     	char buffer2[buffer2Size];
@@ -93,6 +91,8 @@ int server_recv_message(socket_t* skt){
     		i++;
     	}
 
+    	dbusmessage_create(&msg);
+
     	dbusmessage_server_set_message(&msg,protocol,lHeader+lPadding+lBody);
     	if (id>=(int)dbusmessage_get_id(&msg)) return 1;
     	id = (int)dbusmessage_get_id(&msg);
@@ -104,16 +104,15 @@ int server_recv_message(socket_t* skt){
 		printf("* Interfaz: %s\n",dbusmessage_server_get_interface(&msg));
 		printf("* Metodo: %s\n",dbusmessage_server_get_method(&msg));
 		if (dbusmessage_server_get_cant_args(&msg)>0) {
-			printf("* Parametros:\n");
+			printf("* Parámetros:\n");
 			args = dbusmessage_server_get_args(&msg);
 			for(int i=0; i<dbusmessage_server_get_cant_args(&msg); i++){
 				printf("    * %s\n",args[i]);
 			}
 		}
-		printf("\n");
 		snprintf(answer,sizeof(answer),"%s%s",hex,RESPONSE);
 		server_send_message(skt,answer, strlen(answer));
+	    dbusmessage_destroy(&msg);
     } while (received>0);
-    dbusmessage_destroy(&msg);
     return 0;
 }
