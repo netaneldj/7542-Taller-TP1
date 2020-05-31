@@ -232,7 +232,7 @@ static int process_msg_parameters(dbusmessage_t* self){
 			len = (int)strtol(byte, NULL, 16);
 			if(len==0)
 				break;
-			printf("* Parámetros:\n");
+			printf("* Parametros:\n");
 		    process_msg_args(self);
 			break;
 		}
