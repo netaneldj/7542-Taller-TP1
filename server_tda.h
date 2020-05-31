@@ -1,10 +1,13 @@
 #ifndef SERVER_H
 #define SERVER_H
+
 #include "common_dbusmessage.h"
 #include "common_socket.h"
 
 typedef struct server {
-    socket_t socket;
+    socket_t skt;
+    socket_t skt_a;
+    dbusmessage_t dbus;
 } server_t;
 
 /**
@@ -26,11 +29,16 @@ int server_run(server_t* self, char* service);
 /**
  * Recibe el mensaje
  */
-int server_recv_message(socket_t* skt);
+int server_process(server_t* self);
+
+/**
+ * Recibe el mensaje
+ */
+int server_recv(server_t* self);
 
 /**
  * Envía el mensaje
  */
-int server_send_message(socket_t* skt, char* msg, size_t len);
+int server_send(server_t* self);
 
 #endif // SERVER_H

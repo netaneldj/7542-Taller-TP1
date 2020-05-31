@@ -2,9 +2,11 @@
 #define CLIENT_H
 
 #include "common_socket.h"
+#include "common_dbusmessage.h"
 
 typedef struct client {
     socket_t socket;
+    dbusmessage_t dbus;
 } client_t;
 
 /**
@@ -31,6 +33,6 @@ void client_recv(client_t* self, char* response);
 /**
  * Envía el mensaje
  */
-int client_send(client_t* self, char* protocol, size_t len);
+int client_send(client_t* self, dbusmessage_t* dbus, char* msg);
 
 #endif // CLIENT_H

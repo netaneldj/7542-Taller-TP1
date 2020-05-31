@@ -11,11 +11,11 @@
 
 int main(int argc, char** argv) {
     FILE* input;
-	if (argc < 3) {
-        printf("Uso: ./client <host> <puerto>\n");
+	if (argc < 3 || argc > 4) {
+        printf("Uso: ./client <host> <puerto> [<archivo de entrada>]");
         return ERROR;
     }
-    if (argc > 3) {
+    if (argc == 4) {
         input = fopen(argv[3], "r");
     } else {
         input = stdin;

@@ -21,98 +21,53 @@ char RESPONSE[] = ": OK";
  * *****************************************************************/
 
 void server_create(server_t* self) {
-	socket_create(&self->socket);
+	socket_create(&self->skt);
+	socket_create(&self->skt_a);
+	dbusmessage_create(&self->dbus);
 }
 
 void server_destroy(server_t* self) {
-    socket_destroy(&self->socket);
+    socket_destroy(&self->skt);
+    dbusmessage_destroy(&self->dbus);
 }
 
 int server_run(server_t* self, char* service) {
-	socket_t skt_a;
-
-	if (!socket_bind(&self->socket, service)) {
+	if (!socket_bind(&self->skt, service)) {
         printf("No se pudo tomar el puerto");
-        socket_close(&self->socket);
+        socket_close(&self->skt);
         return 1;
     }
-	if (!socket_listen(&self->socket)) {
+	if (!socket_listen(&self->skt)) {
         printf("No se pudo escuchar el puerto");
-        socket_close(&self->socket);
+        socket_close(&self->skt);
         return 1;
     }
 
-	socket_create(&skt_a);
-    if (socket_accept(&self->socket, &skt_a)) {
+    if (socket_accept(&self->skt, &self->skt_a)) {
         printf("No se pudo aceptar el cliente");
         return 1;
     }
 
-    server_recv_message(&skt_a);
+    server_process(self);
 
-    socket_close(&skt_a);
-    socket_close(&self->socket);
+    socket_close(&self->skt_a);
+    socket_close(&self->skt);
     return 0;
 }
 
-int server_send_message(socket_t* skt, char* msg, size_t len) {
-	return socket_send_message(skt,msg,len);
+int server_process(server_t* self) {
+	while(server_recv(self)>0) {
+		server_send(self);
+	}
+	return 0;
 }
 
-int server_recv_message(socket_t* skt){
-	dbusmessage_t msg;
-	char** args = NULL;
-	int id = -1;
-	int buffer2Size = 0;
-	char hex[11] = "";
+int server_send(server_t* self) {
 	char answer[15] = "";
-	char buffer1[BUFFER_SIZE];
-	int lHeader, lBody, lPadding, received, i;
+	snprintf(answer,sizeof(answer),"0x%.8x%s",(int)dbusmessage_get_id(&self->dbus),RESPONSE);
+	return socket_send_message(&self->skt_a,answer,strlen(answer));
+}
 
-    do{
-    	received = socket_recv_message(skt,buffer1,BUFFER_SIZE);
-    	lBody = get_protocol_int(buffer1,4,8);
-    	lHeader = get_protocol_int(buffer1,12,16);
-    	lPadding = get_padding(lHeader);
-
-    	buffer2Size = lHeader+lPadding+lBody-BUFFER_SIZE;
-
-    	char buffer2[buffer2Size];
-    	char protocol[lHeader+lPadding+lBody];
-
-    	received = socket_recv_message(skt,buffer2,buffer2Size);
-
-    	for(i=0; i<BUFFER_SIZE; i++){
-    		protocol[i] = buffer1[i];
-    	}
-
-    	for(int j=0; j<buffer2Size; j++){
-    		protocol[i] = buffer2[j];
-    		i++;
-    	}
-
-    	dbusmessage_create(&msg);
-
-    	dbusmessage_server_set_message(&msg,protocol,lHeader+lPadding+lBody);
-    	if (id>=(int)dbusmessage_get_id(&msg)) return 1;
-    	id = (int)dbusmessage_get_id(&msg);
-
-		snprintf(hex,sizeof(hex),"0x%.8x",(int)dbusmessage_get_id(&msg));
-		printf("* Id: %s\n",hex);
-		printf("* Destino: %s\n",dbusmessage_server_get_destination(&msg));
-		printf("* Ruta: %s\n",dbusmessage_server_get_path(&msg));
-		printf("* Interfaz: %s\n",dbusmessage_server_get_interface(&msg));
-		printf("* Metodo: %s\n",dbusmessage_server_get_method(&msg));
-		if (dbusmessage_server_get_cant_args(&msg)>0) {
-			printf("* Parámetros:\n");
-			args = dbusmessage_server_get_args(&msg);
-			for(int i=0; i<dbusmessage_server_get_cant_args(&msg); i++){
-				printf("    * %s\n",args[i]);
-			}
-		}
-		snprintf(answer,sizeof(answer),"%s%s",hex,RESPONSE);
-		server_send_message(skt,answer, strlen(answer));
-	    dbusmessage_destroy(&msg);
-    } while (received>0);
-    return 0;
+int server_recv(server_t* self){
+    return dbusmessage_server_recv(&self->dbus,&self->skt_a);
 }

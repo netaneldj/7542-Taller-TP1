@@ -1,3 +1,4 @@
+
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -6,6 +7,7 @@
 #include <stdio.h>
 #include "client_tda.h"
 #include "common_dbusmessage.h"
+#include "common_dynamicvector.h"
 
 #define BUFFER_SIZE 32
 #define RECV_MSG_SIZE 14
@@ -18,8 +20,7 @@
  * *****************************************************************/
 
 static void process_text_file(client_t* self, FILE* text_file);
-static void process_text_line(client_t* self, vector_t* temp, int msgId);
-static void client_comm(client_t* self, char* protocol, dbusmessage_t* msg);
+static void process_msg(client_t* self, vector_t* temp, int msgId);
 
 /* ******************************************************************
  *                IMPLEMENTACION
@@ -27,10 +28,12 @@ static void client_comm(client_t* self, char* protocol, dbusmessage_t* msg);
 
 void client_create(client_t* self) {
 	socket_create(&self->socket);
+	dbusmessage_create(&self->dbus);
 }
 
 void client_destroy(client_t* self) {
     socket_destroy(&self->socket);
+	dbusmessage_destroy(&self->dbus);
 }
 
 int client_run(client_t* self, char* host, char* service, FILE *text_file) {
@@ -43,8 +46,8 @@ int client_run(client_t* self, char* host, char* service, FILE *text_file) {
     return 0;
 }
 
-int client_send(client_t* self, char* protocol, size_t len) {
-    return socket_send_message(&self->socket,protocol,len);
+int client_send(client_t* self, dbusmessage_t* dbus, char* msg) {
+    return dbusmessage_client_send(dbus, &self->socket, msg);
 }
 
 void client_recv(client_t* self, char* response) {
@@ -67,7 +70,8 @@ static void process_text_file(client_t* self, FILE* text_file) {
 		bytes = fread(buffer, 1, BUFFER_SIZE, text_file);
 		for (int i=0; i<bytes; i++){
 			if(buffer[i]=='\n'){
-				process_text_line(self, &temp, msgId);
+				vector_agregar(&temp,'\0');
+				process_msg(self, &temp, msgId);
 				vector_destruir(&temp);
 				vector_crear(&temp,BUFFER_SIZE);
 				msgId++;
@@ -76,28 +80,26 @@ static void process_text_file(client_t* self, FILE* text_file) {
 			vector_agregar(&temp,buffer[i]);
 		}
 	}
+	vector_destruir(&temp);
 }
 
-static void process_text_line(client_t* self, vector_t* temp, int msgId){
-	char* protocolo = NULL;
-	dbusmessage_t msg;
-
+static void process_msg(client_t* self, vector_t* temp, int msgId){
+	char response[RECV_MSG_SIZE];
 	char line[vector_obtener_cantidad(temp)];
+	vector_t header, body;
+
 	memset(line, 0, vector_obtener_cantidad(temp)*sizeof(char));
 	for (int j=0; j<vector_obtener_cantidad(temp); j++) {
 		vector_obtener(temp,j,&line[j]);
 	}
-	dbusmessage_create(&msg);
-	dbusmessage_set_id(&msg,msgId);
-	protocolo = dbusmessage_client_get_protocol(&msg,line);
-	client_comm(self,protocolo,&msg);
-	dbusmessage_destroy(&msg);
-}
-
-static void client_comm(client_t* self, char* protocol, dbusmessage_t* msg){
-	char response[RECV_MSG_SIZE];
-
-	client_send(self,protocol,dbusmessage_client_get_len_protocol(msg));
+	vector_crear(&header,0);
+	vector_crear(&body,0);
+	dbusmessage_set_id(&self->dbus,msgId);
+	dbusmessage_set_header(&self->dbus, &header);
+	dbusmessage_set_body(&self->dbus, &body);
+	client_send(self,&self->dbus, line);
 	client_recv(self, response);
     printf("%s\n",response);
+    vector_destruir(&header);
+    vector_destruir(&body);
 }

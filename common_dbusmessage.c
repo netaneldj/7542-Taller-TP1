@@ -1,10 +1,9 @@
 #include "common_dbusmessage.h"
 
+#include "common_dynamicvector.h"
+#include "common_socket.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
-
-#include "common_dynamicvector.h"
 
 #define UINT32 8
 #define PARAMETERS 5
@@ -13,6 +12,8 @@
 /* ******************************************************************
  *                DEFINICION FUNCIONES AUXILIARES
  * *****************************************************************/
+// Guarda el protocol en el mensaje
+static int set_protocol(dbusmessage_t* self, char* msg, size_t len);
 //Guarda espacio para un uint32 en el mensaje
 static void set_protocol_init_uint32(vector_t* self);
 //Escribe el numero en formato uint32
@@ -49,14 +50,11 @@ static void update_protocol_len(dbusmessage_t* self);
 static void int_to_uint32(long int num, char* res);
 //Convierte de hexadecimal de 4 bytes a entero
 static int uint32_to_int(char* uint32);
-//Devuelve una nueva cadena reemplazando las ocurrencias
-//de la palabra anterior con la nueva
-static char* replace_word(char* string, char *oldWord, char *newWord);
 //Devuelve la cantidad de elementos existentes en el split
 //de la cadena param con el delimitador delim(client)
-static int get_cant_split(char* param, char delim);
+static int get_cant_split(char* param);
 //Escribe el mensaje unificado a retornar con el header y el body(client)
-static int write_message(dbusmessage_t* self);
+static int send_message(dbusmessage_t* self, socket_t* skt);
 //Devuelve el valor decimal del entero de 4 bytes almacenado
 //en el mensaje entre las posiciones start y finish(server)
 static int get_msg_int(dbusmessage_t* self,int start, int finish);
@@ -73,32 +71,21 @@ static int process_msg_args(dbusmessage_t* self);
 void dbusmessage_create(dbusmessage_t* self){
 	self->id = 0;
 	self->msg = NULL;
-	self->destination = NULL;
-	self->path = NULL;
-	self->interface = NULL;
-	self->method = NULL;
-	self->args = NULL;
-	vector_crear(&self->header,0);
-	vector_crear(&self->body,0);
+	self->header = NULL;
+	self->body = NULL;
 	self->lHeader = 0;
 	self->lBody = 0;
 	self->lMsg = 0;
-	self->lArgs = 0;
 }
 
 void dbusmessage_destroy(dbusmessage_t* self){
-	vector_destruir(&self->header);
-	vector_destruir(&self->body);
-	if (self->destination!=NULL) free(self->destination);
-	if (self->path!=NULL) free(self->path);
-	if (self->interface!=NULL) free(self->interface);
-	if (self->method!=NULL )free(self->method);
-	if (self->msg!=NULL) free(self->msg);
-	if(self->lArgs>0){
-		for(int i=0; i<self->lArgs; i++)
-			if (self->args[i]!=NULL) free(self->args[i]);
-	}
-	if (self->args!=NULL) free(self->args);
+	self->id = 0;
+	self->msg = NULL;
+	self->header = NULL;
+	self->body = NULL;
+	self->lHeader = 0;
+	self->lBody = 0;
+	self->lMsg = 0;
 }
 
 void dbusmessage_set_id(dbusmessage_t* self, int id){
@@ -109,22 +96,33 @@ int dbusmessage_get_id(dbusmessage_t* self){
 	return self->id;
 }
 
-char* dbusmessage_client_get_protocol(dbusmessage_t* self, char* input){
-	set_protocol_header_constants(&self->header);
-	set_protocol_init_uint32(&self->header);
-	set_protocol_uint32(&self->header,dbusmessage_get_id(self));
-	set_protocol_init_uint32(&self->header);
-	set_protocol_process_input(self,input);
-	set_protocol_uint32_custom(&self->header,
-							   (int)dbusmessage_client_get_len_body(self),4,8);
-	set_protocol_uint32_custom(&self->header,
-							   (int)dbusmessage_client_get_len_header(self),12,16);
-	write_message(self);
-	return self->msg;
+void dbusmessage_set_header(dbusmessage_t* self, vector_t* header) {
+	self->header = header;
 }
 
-size_t dbusmessage_client_get_len_protocol(dbusmessage_t* self){
-	return vector_obtener_cantidad(&self->header)+vector_obtener_cantidad(&self->body);
+vector_t* dbusmessage_get_header(dbusmessage_t* self) {
+	return self->header;
+}
+
+void dbusmessage_set_body(dbusmessage_t* self, vector_t* body) {
+	self->body = body;
+}
+
+vector_t* dbusmessage_get_body(dbusmessage_t* self) {
+	return self->body;
+}
+
+int dbusmessage_client_send(dbusmessage_t* self, socket_t* skt, char* input){
+	set_protocol_header_constants(self->header);
+	set_protocol_init_uint32(self->header);
+	set_protocol_uint32(self->header,dbusmessage_get_id(self));
+	set_protocol_init_uint32(self->header);
+	set_protocol_process_input(self,input);
+	set_protocol_uint32_custom(self->header,
+							   (int)dbusmessage_client_get_len_body(self),4,8);
+	set_protocol_uint32_custom(self->header,
+							   (int)dbusmessage_client_get_len_header(self),12,16);
+	return send_message(self, skt);
 }
 
 //la suma de len header y len body no es la misma que len protocol
@@ -136,60 +134,68 @@ size_t dbusmessage_client_get_len_body(dbusmessage_t* self){
 	return self->lBody;
 }
 
-int dbusmessage_server_set_message(dbusmessage_t* self, char* msg, size_t len){
-	self->msg = malloc(len*sizeof(char));
-	if (len > 0 && self->msg == NULL) {
-	        return 1;
+int dbusmessage_server_recv(dbusmessage_t* self, socket_t* skt) {
+	int remain = 0;
+	char buffer1[BUFFER_SIZE];
+	int lHeader, lBody, lPadding, i;
+
+	if (socket_recv_message(skt,buffer1,BUFFER_SIZE) <= 0) return 0;
+
+	lBody = get_protocol_int(buffer1,4,8);
+	lHeader = get_protocol_int(buffer1,12,16);
+	lPadding = get_padding(lHeader);
+
+	char protocol[lHeader+lPadding+lBody];
+	for(i=0; i<BUFFER_SIZE; i++){
+		protocol[i] = buffer1[i];
 	}
-	self->msg = msg;
-	self->lMsg = len;
-	self->lBody = get_msg_int(self,4,8);
-	self->id = get_msg_int(self,8, 12);
-	self->lHeader = get_msg_int(self,12,16);
-	process_msg_parameters(self);
-	return 0;
-}
 
-char* dbusmessage_server_get_destination(dbusmessage_t* self){
-	return self->destination;
-}
+	remain = lHeader+lPadding+lBody-BUFFER_SIZE;
 
-char* dbusmessage_server_get_path(dbusmessage_t* self){
-	return self->path;
-}
+	char buffer2[remain];
 
-char* dbusmessage_server_get_interface(dbusmessage_t* self){
-	return self->interface;
-}
+	if (socket_recv_message(skt,buffer2,remain) <= 0) return 0;
 
-char* dbusmessage_server_get_method(dbusmessage_t* self){
-	return self->method;
-}
+	for(int j=0; j<remain; j++){
+		protocol[i] = buffer2[j];
+		i++;
+	}
 
-char** dbusmessage_server_get_args(dbusmessage_t* self){
-	return self->args;
-}
+	set_protocol(self,protocol,lHeader+lPadding+lBody);
 
-size_t dbusmessage_server_get_cant_args(dbusmessage_t* self){
-	return self->lArgs;
+    return 1;
 }
 
 /* ******************************************************************
  *                IMPLEMENTACIONES AUXILIARES
  * *****************************************************************/
 
+static int set_protocol(dbusmessage_t* self, char* msg, size_t len){
+	char hex[11] = "";
+
+	self->msg = msg;
+	self->lMsg = len;
+	self->lBody = get_msg_int(self,4,8);
+	self->id = get_msg_int(self,8, 12);
+	self->lHeader = get_msg_int(self,12,16);
+
+	snprintf(hex,sizeof(hex),"0x%.8x",(int)self->id);
+	printf("* Id: %s\n",hex);
+
+	process_msg_parameters(self);
+	return 0;
+}
+
 static int process_msg_args(dbusmessage_t* self){
 	int pos = self->lMsg-self->lBody;
-	int len;
 	int i = 0;
+	int len;
 
 	while(pos<self->lMsg){
 		len = get_msg_int(self,pos,pos+4);
-		self->args[i] = malloc((len+1)*sizeof(char));
-	    if (len>0 && self->args == NULL) {
-	        return -1;
-	    }
-		strncpy(self->args[i],self->msg+pos+4,len+1);
+		char arg[len+1];
+		strncpy(arg,self->msg+pos+4,len+1);
+		printf("    * %s\n",arg);
 		i++;
 		pos+=4+len+1;
 	}
@@ -206,51 +212,48 @@ static int process_msg_parameters(dbusmessage_t* self){
 		tipo = (int)strtol(byte, NULL, 16);
 		len = get_msg_int(self,pos+4,pos+8);
 		padding = get_padding(pos+8+len+1);
+		char param[len+1];
+		strncpy(param,self->msg+pos+8,len+1);
 		switch(tipo){
 		case 6:
-			self->destination = malloc((len+1)*sizeof(char));
-		    if (self->destination == NULL) {
-		        return 1;
-		    }
-			strncpy(self->destination,self->msg+pos+8,len+1);
+			printf("* Destino: %s\n",param);
 			break;
 		case 1:
-			self->path = malloc((len+1)*sizeof(char));
-		    if (self->path == NULL) {
-		        return 1;
-		    }
-			strncpy(self->path,self->msg+pos+8,len+1);
+			printf("* Ruta: %s\n",param);
 			break;
 		case 2:
-			self->interface = malloc((len+1)*sizeof(char));
-		    if (self->interface == NULL) {
-		        return 1;
-		    }
-			strncpy(self->interface,self->msg+pos+8,len+1);
+			printf("* Interfaz: %s\n",param);
 			break;
 		case 3:
-			self->method = malloc((len+1)*sizeof(char));
-		    if (self->method == NULL) {
-		        return 1;
-		    }
-			strncpy(self->method,self->msg+pos+8,len+1);
+			printf("* Metodo: %s\n",param);
 			break;
 		case 8:
 			snprintf(byte,sizeof(byte),"%02hhX",self->msg[pos+4]);
 			len = (int)strtol(byte, NULL, 16);
-			self->lArgs = len;
 			if(len==0)
 				break;
-			self->args = (char**) malloc(len*sizeof(char*));
-		    if (len>0 && self->args == NULL) {
-		        return 1;
-		    }
+			printf("* Parámetros:\n");
 		    process_msg_args(self);
 			break;
 		}
 		pos+=8+len+padding+1;
 	}
 	return 0;
+}
+
+static int send_message(dbusmessage_t* self, socket_t* skt) {
+	int i, capacidad;
+	capacidad = vector_obtener_cantidad(self->header)+vector_obtener_cantidad(self->body);
+	char msg [capacidad];
+
+	for(i=0; i<vector_obtener_cantidad(self->header); i++){
+		vector_obtener(self->header,i,&msg[i]);
+	}
+	for(int j=0; j<vector_obtener_cantidad(self->body); j++){
+		vector_obtener(self->body,j,&msg[i]);
+		i++;
+	}
+	return socket_send_message(skt, msg, vector_obtener_cantidad(self->header) + vector_obtener_cantidad(self->body));
 }
 
 int get_protocol_int(char* protocol,int start, int finish){
@@ -285,70 +288,18 @@ int get_padding(int pos){
 	return padding;
 }
 
-static int write_message(dbusmessage_t* self) {
-	int i, capacidad;
+static int get_cant_split(char* param){
+	char temp[strlen(param)];
+	strcpy(temp,param);
+	char* ptr = NULL;
+	int count = 0;
 
-	capacidad = vector_obtener_cantidad(&self->header)+vector_obtener_cantidad(&self->body);
-	self->msg = malloc(capacidad*sizeof(char));
-    if (capacidad > 0 && self->msg == NULL) {
-        return 1;
-    }
-	for(i=0; i<vector_obtener_cantidad(&self->header); i++){
-		vector_obtener(&self->header,i,&self->msg[i]);
-	}
-	for(int j=0; j<vector_obtener_cantidad(&self->body); j++){
-		vector_obtener(&self->body,j,&self->msg[i]);
-		i++;
-	}
-	return 0;
-}
-
-static int get_cant_split(char* param, char delim){
-	char* ptr = param;
-	char format[] = "%31[^ ]%n";
-	char field[BUFFER_SIZE];
-	int n, count;
-
-	count = 0;
-	format[5] = delim;
-	while (sscanf(ptr, format, field, &n) == 1) {
+	ptr = strtok(temp,",");
+	while (ptr!=NULL) {
 		count++;
-		ptr += n;
-		if ( *ptr != delim ) {
-			break;
-		}
-		++ptr;
+		ptr = strtok(NULL,",");
 	}
 	return count;
-}
-
-static char* replace_word(char* string, char *oldWord, char *newWord) {
-	char *result = NULL;
-    int i, count = 0;
-    int newWlen = strlen(newWord);
-    int oldWlen = strlen(oldWord);
-
-    for (i = 0; string[i] != '\0'; i++) {
-        if (strstr(&string[i], oldWord) == &string[i]) {
-            count++;
-            i += oldWlen - 1;
-        }
-    }
-
-    result = (char *)malloc(i + count * (newWlen - oldWlen) + 1);
-    i = 0;
-    while (*string) {
-        if (strstr(string, oldWord) == string) {
-            strcpy(&result[i], newWord);
-            i += newWlen;
-            string += oldWlen;
-        } else {
-            result[i++] = *string++;
-        }
-    }
-
-    result[i] = '\0';
-    return result;
 }
 
 static int uint32_to_int(char* hex){
@@ -418,102 +369,86 @@ static void int_to_uint32(long int num, char* res) {
 }
 
 static void update_protocol_len(dbusmessage_t* self) {
-   self->lHeader = vector_obtener_cantidad(&self->header);
-   self->lBody = vector_obtener_cantidad(&self->body);
+   self->lHeader = vector_obtener_cantidad(self->header);
+   self->lBody = vector_obtener_cantidad(self->body);
 }
 
 static void set_protocol_process_destination(dbusmessage_t* self, char* destination) {
-   set_protocol_param_const(&self->header,6,1,'s');
-   set_protocol_uint32(&self->header,strlen(destination));
-   set_protocol_param(&self->header,destination);
-   set_protocol_padding(&self->header);
+   set_protocol_param_const(self->header,6,1,'s');
+   set_protocol_uint32(self->header,strlen(destination));
+   set_protocol_param(self->header,destination);
+   set_protocol_padding(self->header);
    update_protocol_len(self);
 }
 
 static void set_protocol_process_path(dbusmessage_t* self, char* path) {
-   set_protocol_param_const(&self->header,1,1,'o');
-   set_protocol_uint32(&self->header,strlen(path));
-   set_protocol_param(&self->header,path);
-   set_protocol_padding(&self->header);
+   set_protocol_param_const(self->header,1,1,'o');
+   set_protocol_uint32(self->header,strlen(path));
+   set_protocol_param(self->header,path);
+   set_protocol_padding(self->header);
    update_protocol_len(self);
 }
 
 static void set_protocol_process_interface(dbusmessage_t* self, char* interface) {
-   set_protocol_param_const(&self->header,2,1,'s');
-   set_protocol_uint32(&self->header,strlen(interface));
-   set_protocol_param(&self->header,interface);
-   set_protocol_padding(&self->header);
+   set_protocol_param_const(self->header,2,1,'s');
+   set_protocol_uint32(self->header,strlen(interface));
+   set_protocol_param(self->header,interface);
+   set_protocol_padding(self->header);
    update_protocol_len(self);
 }
 
 static void set_protocol_process_method(dbusmessage_t* self, char* method) {
-   set_protocol_param_const(&self->header,3,1,'s');
-   set_protocol_uint32(&self->header,strlen(method));
-   set_protocol_param(&self->header,method);
-   set_protocol_padding(&self->header);
+   set_protocol_param_const(self->header,3,1,'s');
+   set_protocol_uint32(self->header,strlen(method));
+   set_protocol_param(self->header,method);
+   set_protocol_padding(self->header);
    update_protocol_len(self);
 }
 
 static void set_protocol_process_args(dbusmessage_t* self,char* args) {
-	char arg[BUFFER_SIZE], lenArg[UINT32], aux[3];
-	char format[] = "%31[^,]%n";
-	char* ptr = args;
-	int n;
+	char lenArg[UINT32], aux[3];
+	char temp[strlen(args)];
+	char* arg;
 
-	set_protocol_param_const(&self->header,8,1,'g');
-	while (sscanf(ptr, format, arg, &n) == 1) {
+	strcpy(temp,args);
+
+	arg = strtok(temp, ",");
+
+	set_protocol_param_const(self->header,8,1,'g');
+	while (arg!=NULL) {
 		//LONGITUD DEL ARGUMENTO EN 32BITS
 		int_to_uint32(strlen(arg),lenArg);
 		for (int i=0; i<UINT32; i+=2) {
 			snprintf(aux,sizeof(aux),"%c%c",lenArg[i],lenArg[i+1]);
-			vector_agregar(&self->body,(int)strtol(aux, NULL, 16));
+			vector_agregar(self->body,(int)strtol(aux, NULL, 16));
 		}
 		//LETRAS DEL ARGUMENTO
 		for (int i=0; i<strlen(arg); i++) {
-		   vector_agregar(&self->body,arg[i]);
+		   vector_agregar(self->body,arg[i]);
 		}
-		vector_agregar(&self->body,0);//CORRESPONDE AL \0
-		ptr += n;
-		if (*ptr != ',') {
-			break;
-		}
-		++ptr;
+		vector_agregar(self->body,0);//CORRESPONDE AL \0
+		arg = strtok(NULL,",");
 	}
 	set_protocol_args(self,args);
 	update_protocol_len(self);
-	set_protocol_padding(&self->header);
+	set_protocol_padding(self->header);
 }
 
 static void set_protocol_process_input(dbusmessage_t* self, char* input) {
-	char *msg1, *msg2, *param;
-	int params;
+	char destination[100], path[100], interface[100], method[100], args[100];
 
-	msg1 = replace_word(input,"("," ");
-	msg2 = replace_word(msg1,")","");
-	params = get_cant_split(msg2,' ');
-	param = strtok(msg2," ");
-	for (int i=0; i<params; i++) {
-		switch(i) {
-		   case 0 : //DESTINO
-			   set_protocol_process_destination(self,param);
-			   break;
-		   case 1 : //RUTA
-				set_protocol_process_path(self,param);
-				break;
-		   case 2 : //INTERFAZ
-			   set_protocol_process_interface(self,param);
-			   break;
-		   case 3 : //METODO
-				set_protocol_process_method(self,param);
-				break;
-		   case 4 : //ARGUMENTOS
-			   set_protocol_process_args(self,param);
-			   break;
-		}
-		param = strtok(NULL," ");
+	for (int i=0; i< strlen(input); i++) {
+		if (input[i]=='(') input[i] = ' ';
+		else if (input[i]==')') input[i] = '\0';
 	}
-	free(msg1);
-	free(msg2);
+
+	int params = sscanf(input,"%s %s %s %s %s",destination, path, interface, method, args);
+
+	set_protocol_process_destination(self,destination);
+	set_protocol_process_path(self,path);
+	set_protocol_process_interface(self,interface);
+	set_protocol_process_method(self,method);
+	if (params==5) set_protocol_process_args(self,args);
 }
 
 static void set_protocol_param_const(vector_t* self,int id, int cnt, char type) {
@@ -544,13 +479,12 @@ static void set_protocol_padding(vector_t* self) {
 }
 
 static void set_protocol_args(dbusmessage_t* self, char* param) {
-	int cantArgs = get_cant_split(param,',');
-
-	vector_agregar(&self->header,cantArgs);//CANTIDAD DE ARGUMENTOS
+	int cantArgs = get_cant_split(param);
+	vector_agregar(self->header,cantArgs);//CANTIDAD DE ARGUMENTOS
 	for (int i=0; i<cantArgs; i++) {
-		vector_agregar(&self->header,'s');//TIPO DE DATO
+		vector_agregar(self->header,'s');//TIPO DE DATO
 	}
-	vector_agregar(&self->header,0);//AGREGO \0
+	vector_agregar(self->header,0);//AGREGO \0
 }
 
 static void set_protocol_init_uint32(vector_t* self){
