@@ -1,4 +1,3 @@
-
 #include <unistd.h>
 #include <arpa/inet.h> // inet_ntop
 #include <sys/socket.h>
@@ -64,7 +63,8 @@ int server_process(server_t* self) {
 
 int server_send(server_t* self) {
 	char answer[15] = "";
-	snprintf(answer,sizeof(answer),"0x%.8x%s",(int)dbusmessage_get_id(&self->dbus),RESPONSE);
+	snprintf(answer,sizeof(answer),"0x%.8x%s",
+			(int)dbusmessage_get_id(&self->dbus),RESPONSE);
 	return socket_send_message(&self->skt_a,answer,strlen(answer));
 }
 

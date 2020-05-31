@@ -6,8 +6,8 @@
 #include <stdio.h>
 
 #define UINT32 8
-#define PARAMETERS 5
 #define BUFFER_SIZE 32
+#define MAX_LENGTH_PARAM 50
 
 /* ******************************************************************
  *                DEFINICION FUNCIONES AUXILIARES
@@ -33,11 +33,13 @@ static void set_protocol_header_constants(vector_t* self);
 //Procesa los parametros del mensaje(client)
 static void set_protocol_process_input(dbusmessage_t* self, char* input);
 //Procesa el destino
-static void set_protocol_process_destination(dbusmessage_t* self, char* destination);
+static void set_protocol_process_destination(dbusmessage_t* self,
+		char* destination);
 //Procesa la ruta
 static void set_protocol_process_path(dbusmessage_t* self, char* path);
 //Procesa la interface
-static void set_protocol_process_interface(dbusmessage_t* self, char* interface);
+static void set_protocol_process_interface(dbusmessage_t* self,
+		char* interface);
 //Procesa el metodo
 static void set_protocol_process_method(dbusmessage_t* self, char* method);
 //Procesa los argumentos del metodo(client)
@@ -246,7 +248,8 @@ static int process_msg_parameters(dbusmessage_t* self){
 
 static int send_message(dbusmessage_t* self, socket_t* skt) {
 	int i, capacidad;
-	capacidad = vector_obtener_cantidad(self->header)+vector_obtener_cantidad(self->body);
+	capacidad = vector_obtener_cantidad(self->header)+
+				vector_obtener_cantidad(self->body);
 	char msg [capacidad];
 
 	for(i=0; i<vector_obtener_cantidad(self->header); i++){
@@ -256,7 +259,8 @@ static int send_message(dbusmessage_t* self, socket_t* skt) {
 		vector_obtener(self->body,j,&msg[i]);
 		i++;
 	}
-	return socket_send_message(skt, msg, vector_obtener_cantidad(self->header) + vector_obtener_cantidad(self->body));
+	return socket_send_message(skt, msg, vector_obtener_cantidad(self->header)
+			+ vector_obtener_cantidad(self->body));
 }
 
 int get_protocol_int(char* protocol,int start, int finish){
@@ -293,7 +297,7 @@ int get_padding(int pos){
 
 static int get_cant_split(char* param){
 	char temp[strlen(param)];
-	strcpy(temp,param);
+	snprintf(temp,strlen(param)+1,"%s",param);
 	char* ptr = NULL;
 	int count = 0;
 
@@ -368,7 +372,7 @@ static void int_to_uint32(long int num, char* res) {
 	    snprintf(aux,sizeof(aux),"%c%c",temp[j+1],temp[j]);
 	    strcat(hexa,aux);
 	}
-	strcpy(res,hexa);
+	snprintf(res,strlen(hexa)+1,"%s",hexa);
 }
 
 static void update_protocol_len(dbusmessage_t* self) {
@@ -411,7 +415,7 @@ static void set_protocol_process_method(dbusmessage_t* self, char* method) {
 static void set_protocol_process_args(dbusmessage_t* self,char* args) {
 	char temp[strlen(args)], *arg;
 
-	strcpy(temp,args);
+	snprintf(temp,strlen(args)+1,"%s",args);
 
 	arg = strtok(temp, ",");
 
@@ -430,11 +434,12 @@ static void set_protocol_process_args(dbusmessage_t* self,char* args) {
 }
 
 static void set_protocol_process_input(dbusmessage_t* self, char* input) {
-	char destination[50], path[50], interface[50], method[50];
+	char destination[MAX_LENGTH_PARAM], path[MAX_LENGTH_PARAM],
+		interface[MAX_LENGTH_PARAM], method[MAX_LENGTH_PARAM];
 	char *param = NULL, temp[strlen(input)];
 	int i = 0;
 
-	strcpy(temp, input);
+	snprintf(temp,strlen(input)+1,"%s",input);
 	for (int j = 0; j < strlen(temp); j++) if (temp[j]==')') temp[j] = '\0';
 
 	param = strtok(temp,"(");
