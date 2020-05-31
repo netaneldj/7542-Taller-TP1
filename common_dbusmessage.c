@@ -213,7 +213,7 @@ static int process_msg_parameters(dbusmessage_t* self){
 		len = get_msg_int(self,pos+4,pos+8);
 		padding = get_padding(pos+8+len+1);
 		char param[len+1];
-		strncpy(param,self->msg+pos+8,len+1);
+		if (tipo != 8) strncpy(param,self->msg+pos+8,len+1);
 		switch(tipo){
 		case 6:
 			printf("* Destino: %s\n",param);
@@ -253,6 +253,16 @@ static int send_message(dbusmessage_t* self, socket_t* skt) {
 		vector_obtener(self->body,j,&msg[i]);
 		i++;
 	}
+	FILE *f;
+	f = fopen("out.txt", "w");
+	if (f == NULL) {
+		printf("Error!\n");
+		exit(1);
+	}
+    for(int i=0;(i<vector_obtener_cantidad(self->header)+vector_obtener_cantidad(self->body));i++){
+    	fprintf(f,"%c", msg[i]);
+    }
+    fclose(f);
 	return socket_send_message(skt, msg, vector_obtener_cantidad(self->header) + vector_obtener_cantidad(self->body));
 }
 
@@ -406,9 +416,7 @@ static void set_protocol_process_method(dbusmessage_t* self, char* method) {
 }
 
 static void set_protocol_process_args(dbusmessage_t* self,char* args) {
-	char lenArg[UINT32], aux[3];
-	char temp[strlen(args)];
-	char* arg;
+	char temp[strlen(args)], *arg;
 
 	strcpy(temp,args);
 
@@ -417,15 +425,9 @@ static void set_protocol_process_args(dbusmessage_t* self,char* args) {
 	set_protocol_param_const(self->header,8,1,'g');
 	while (arg!=NULL) {
 		//LONGITUD DEL ARGUMENTO EN 32BITS
-		int_to_uint32(strlen(arg),lenArg);
-		for (int i=0; i<UINT32; i+=2) {
-			snprintf(aux,sizeof(aux),"%c%c",lenArg[i],lenArg[i+1]);
-			vector_agregar(self->body,(int)strtol(aux, NULL, 16));
-		}
+		set_protocol_uint32(self->body,strlen(arg));
 		//LETRAS DEL ARGUMENTO
-		for (int i=0; i<strlen(arg); i++) {
-		   vector_agregar(self->body,arg[i]);
-		}
+		for (int i=0; i<strlen(arg); i++) vector_agregar(self->body,arg[i]);
 		vector_agregar(self->body,0);//CORRESPONDE AL \0
 		arg = strtok(NULL,",");
 	}
@@ -435,20 +437,29 @@ static void set_protocol_process_args(dbusmessage_t* self,char* args) {
 }
 
 static void set_protocol_process_input(dbusmessage_t* self, char* input) {
-	char destination[100], path[100], interface[100], method[100], args[100];
+	char destination[50], path[50], interface[50], method[50];
+	char *param = NULL, temp[strlen(input)];
+	int i = 0;
 
-	for (int i=0; i< strlen(input); i++) {
-		if (input[i]=='(') input[i] = ' ';
-		else if (input[i]==')') input[i] = '\0';
+	strcpy(temp, input);
+	for (int j = 0; j < strlen(temp); j++) if (temp[j]==')') temp[j] = '\0';
+
+	param = strtok(temp,"(");
+	while (param!=NULL) {
+		switch (i) {
+			case 0 :
+				sscanf(param,"%s %s %s %s",destination, path, interface, method);
+				set_protocol_process_destination(self,destination);
+				set_protocol_process_path(self,path);
+				set_protocol_process_interface(self,interface);
+				set_protocol_process_method(self,method);
+				break;
+			case 1 :
+				if (strlen(param) > 0)set_protocol_process_args(self,param);
+		}
+		i++;
+		param = strtok(NULL,"(");
 	}
-
-	int params = sscanf(input,"%s %s %s %s %s",destination, path, interface, method, args);
-
-	set_protocol_process_destination(self,destination);
-	set_protocol_process_path(self,path);
-	set_protocol_process_interface(self,interface);
-	set_protocol_process_method(self,method);
-	if (params==5) set_protocol_process_args(self,args);
 }
 
 static void set_protocol_param_const(vector_t* self,int id, int cnt, char type) {
@@ -480,6 +491,7 @@ static void set_protocol_padding(vector_t* self) {
 
 static void set_protocol_args(dbusmessage_t* self, char* param) {
 	int cantArgs = get_cant_split(param);
+
 	vector_agregar(self->header,cantArgs);//CANTIDAD DE ARGUMENTOS
 	for (int i=0; i<cantArgs; i++) {
 		vector_agregar(self->header,'s');//TIPO DE DATO
