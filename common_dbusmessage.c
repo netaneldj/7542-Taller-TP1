@@ -191,6 +191,8 @@ static int process_msg_args(dbusmessage_t* self){
 	int i = 0;
 	int len;
 
+	printf("* Parametros:\n");
+
 	while(pos<self->lMsg){
 		len = get_msg_int(self,pos,pos+4);
 		char arg[len+1];
@@ -211,10 +213,17 @@ static int process_msg_parameters(dbusmessage_t* self){
 	while (pos<self->lHeader) {
 		snprintf(byte,sizeof(byte),"%02hhX",self->msg[pos]);
 		tipo = (int)strtol(byte, NULL, 16);
+		if (tipo==8) {
+			snprintf(byte,sizeof(byte),"%02hhX",self->msg[pos+4]);
+			len = (int)strtol(byte, NULL, 16);
+			if(len==0) return 0;
+			process_msg_args(self);
+			return 0;
+		}
 		len = get_msg_int(self,pos+4,pos+8);
 		padding = get_padding(pos+8+len+1);
 		char param[len+1];
-		if (tipo != 8) strncpy(param,self->msg+pos+8,len+1);
+		strncpy(param,self->msg+pos+8,len+1);
 		switch(tipo){
 		case 6:
 			printf("* Destino: %s\n",param);
@@ -228,17 +237,10 @@ static int process_msg_parameters(dbusmessage_t* self){
 		case 3:
 			printf("* Metodo: %s\n",param);
 			break;
-		case 8:
-			snprintf(byte,sizeof(byte),"%02hhX",self->msg[pos+4]);
-			len = (int)strtol(byte, NULL, 16);
-			if(len==0)
-				break;
-			printf("* Parametros:\n");
-		    process_msg_args(self);
-			break;
 		}
 		pos+=8+len+padding+1;
 	}
+	printf("\n");
 	return 0;
 }
 
@@ -254,16 +256,6 @@ static int send_message(dbusmessage_t* self, socket_t* skt) {
 		vector_obtener(self->body,j,&msg[i]);
 		i++;
 	}
-	FILE *f;
-	f = fopen("out.txt", "w");
-	if (f == NULL) {
-		printf("Error!\n");
-		exit(1);
-	}
-    for(int i=0;(i<vector_obtener_cantidad(self->header)+vector_obtener_cantidad(self->body));i++){
-    	fprintf(f,"%c", msg[i]);
-    }
-    fclose(f);
 	return socket_send_message(skt, msg, vector_obtener_cantidad(self->header) + vector_obtener_cantidad(self->body));
 }
 
@@ -456,7 +448,8 @@ static void set_protocol_process_input(dbusmessage_t* self, char* input) {
 				set_protocol_process_method(self,method);
 				break;
 			case 1 :
-				if (strlen(param) > 0)set_protocol_process_args(self,param);
+				if (strlen(param) > 0) set_protocol_process_args(self,param);
+				break;
 		}
 		i++;
 		param = strtok(NULL,"(");
