@@ -199,6 +199,7 @@ static int process_msg_args(dbusmessage_t* self){
 		i++;
 		pos+=4+len+1;
 	}
+	printf("\n");
 	return 0;
 }
 
