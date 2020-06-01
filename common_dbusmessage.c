@@ -438,8 +438,7 @@ static void set_protocol_process_args(dbusmessage_t* self,char* args) {
 static void set_protocol_process_input(dbusmessage_t* self, char* input) {
 	char destination[MAX_LENGTH_PARAM], path[MAX_LENGTH_PARAM],
 		interface[MAX_LENGTH_PARAM], method[MAX_LENGTH_PARAM];
-	char *param = NULL, temp[strlen(input)];
-	int i = 0;
+	char *param, temp[MAX_LENGTH_PROTOCOL];
 
 	snprintf(temp,strlen(input)+1,"%s",input);
 	for (int j = 0; j < strlen(temp); j++) {
@@ -447,21 +446,15 @@ static void set_protocol_process_input(dbusmessage_t* self, char* input) {
 	}
 
 	param = strtok(temp,"(");
-	while (param!=NULL) {
-		switch (i) {
-			case 0 :
-				sscanf(param,"%s %s %s %s",destination, path, interface, method);
-				set_protocol_process_destination(self,destination);
-				set_protocol_process_path(self,path);
-				set_protocol_process_interface(self,interface);
-				set_protocol_process_method(self,method);
-				break;
-			case 1 :
-				if (strlen(param) > 0) set_protocol_process_args(self,param);
-				break;
-		}
-		i++;
-		param = strtok(NULL,"(");
+	sscanf(param,"%s %s %s %s",destination, path, interface, method);
+	set_protocol_process_destination(self,destination);
+	set_protocol_process_path(self,path);
+	set_protocol_process_interface(self,interface);
+	set_protocol_process_method(self,method);
+
+	param = strtok(NULL,"(");
+	if (param != NULL) {
+		if (strlen(param) > 0) set_protocol_process_args(self,param);
 	}
 }
 
