@@ -264,14 +264,14 @@ static int send_message(dbusmessage_t* self, socket_t* skt) {
 }
 
 int get_protocol_int(char* protocol,int start, int finish){
-	char string[UINT32+1] = "";
+	char str[UINT32+1] = "";
 	char c[3] = "";
 
 	for (int i=start; i<finish; i++) {
 		snprintf(c,sizeof(c),"%02hhX",protocol[i]);
-		strcat(string,c);
+		strcat(str,c);
 	}
-	return uint32_to_int(string);
+	return uint32_to_int(str);
 }
 
 static int get_msg_int(dbusmessage_t* self,int start, int finish){
