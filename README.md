@@ -40,7 +40,7 @@ Desarrollo del proyecto
 Primeras impresiones
 ------------------------
 
-Al comienzo se dificulto entender la tarea a realizar. Se estuvo varios dias diseñando la resolucion del proyecto. Esto se refiere a comprender el enunciado y poder concluir que objetos habŕia que desarrollar, que rol cumpliría cada uno, como interactuarian entre si, etc.
+Al comienzo se dificulto entender la tarea a realizar. Se estuvo varios dias diseñando la resolucion del proyecto. Esto se refiere a comprender el enunciado y poder concluir que objetos habría que desarrollar, que rol cumpliría cada uno, como interactuarian entre si, etc.
 
 Resolución adoptada
 ------------------------
@@ -65,7 +65,7 @@ El vector dinamico lo utilice a modo de lista para almacenar bytes, caracteres. 
 
 ### Mensaje DBUS
 
-El Mensaje DBUS es el encargado de tomar las lineas de instrucciones que le manda el cliente y devolverlas en formato DBUS para que el cliente se las pueda enviar al servidor. Luego si del lado del servidor se le ingresa dicha instrucción al mensaje, luego se le pueden solicitar los datos de interes como el id, destino, ruta, interfaz, metodo y argumentos (si los tuviese).
+El Mensaje DBUS es el protocolo. Este trabaja tanto del lado del cliente como del lado del servidor. En el cliente se encarga de traducir los comandos al formato del protocolo y enviarselos al servidor. En el servidor recibe el mensaje, lo desencripta y lo muestra por pantalla. Para la comunicación tanto del cliente como del servidor se le pasa el socket correspondiente por parámetro.
 
 ### Socket
 
@@ -73,11 +73,11 @@ El Socket es el encargado de establecer la comunicación entre el cliente y el s
 
 ### Cliente
 
-El Cliente es el encargado de recibir por consola o por parametro las instrucciones que se deben enviar al servidor, procesarlas y enviarselas de a una en protocolo DBUS. Por cada instrucción la traduce, la envia y espera la respuesta del servidor, antes de continuar con la proxima instrucción. Para realizar la conversión al formato del protocolo utiliza al Mensaje DBUS y para la comunicación Socket.
+El Cliente es el encargado de recibir por consola o por parametro las instrucciones que se deben enviar al servidor, procesarlas y enviarselas de a una en protocolo DBUS. Por cada instrucción la traduce, la envia y espera la respuesta del servidor, antes de continuar con la proxima instrucción. Para realizar la conversión al formato del protocolo utiliza al Mensaje DBUS y para la comunicación al Socket.
 
 ### Servidor
 
-El Servidor es el encargado de recibir la información del cliente, traducirla y obtener la información de su interes para luego mostarla por pantalla. Luego de recibirla debe notificarle la recepción al cliente. Para realizar la conversión al formato del protocolo utiliza al Mensaje DBUS y para la comunicación Socket.
+El Servidor es el encargado de recibir la información del cliente, traducirla y mostrar la información por pantalla. Luego de recibirla debe notificarle la recepción al cliente. Para realizar la conversión al formato del protocolo utiliza al Mensaje DBUS y para la comunicación Socket.
 
 Diagrama ilustrativo
 ------------------------
