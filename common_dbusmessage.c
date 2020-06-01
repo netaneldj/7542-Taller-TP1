@@ -1,5 +1,4 @@
 #include "common_dbusmessage.h"
-
 #include "common_dynamicvector.h"
 #include "common_socket.h"
 #include <stdlib.h>
@@ -275,14 +274,14 @@ int get_protocol_int(char* protocol,int start, int finish){
 }
 
 static int get_msg_int(dbusmessage_t* self,int start, int finish){
-	char string[UINT32+1] = "";
+	char str[UINT32+1] = "";
 	char c[3] = "";
 
 	for (int i=start; i<finish; i++) {
 		snprintf(c,sizeof(c),"%02hhX",self->msg[i]);
-		strcat(string,c);
+		strcat(str,c);
 	}
-	return uint32_to_int(string);
+	return uint32_to_int(str);
 }
 
 int get_padding(int pos){
@@ -380,7 +379,8 @@ static void update_protocol_len(dbusmessage_t* self) {
    self->lBody = vector_obtener_cantidad(self->body);
 }
 
-static void set_protocol_process_destination(dbusmessage_t* self, char* destination) {
+static void set_protocol_process_destination(dbusmessage_t* self,
+		char* destination) {
    set_protocol_param_const(self->header,6,1,'s');
    set_protocol_uint32(self->header,strlen(destination));
    set_protocol_param(self->header,destination);
@@ -396,7 +396,8 @@ static void set_protocol_process_path(dbusmessage_t* self, char* path) {
    update_protocol_len(self);
 }
 
-static void set_protocol_process_interface(dbusmessage_t* self, char* interface) {
+static void set_protocol_process_interface(dbusmessage_t* self,
+		char* interface) {
    set_protocol_param_const(self->header,2,1,'s');
    set_protocol_uint32(self->header,strlen(interface));
    set_protocol_param(self->header,interface);
@@ -440,7 +441,9 @@ static void set_protocol_process_input(dbusmessage_t* self, char* input) {
 	int i = 0;
 
 	snprintf(temp,strlen(input)+1,"%s",input);
-	for (int j = 0; j < strlen(temp); j++) if (temp[j]==')') temp[j] = '\0';
+	for (int j = 0; j < strlen(temp); j++) {
+		if (temp[j]==')') temp[j] = '\0';
+	}
 
 	param = strtok(temp,"(");
 	while (param!=NULL) {
@@ -461,7 +464,8 @@ static void set_protocol_process_input(dbusmessage_t* self, char* input) {
 	}
 }
 
-static void set_protocol_param_const(vector_t* self,int id, int cnt, char type) {
+static void set_protocol_param_const(vector_t* self,
+		int id, int cnt, char type) {
    vector_agregar(self,id);//id param
    vector_agregar(self,cnt);//un string
    vector_agregar(self,type);//tipo de dato
@@ -509,7 +513,7 @@ static void set_protocol_uint32(vector_t* self, int num) {
 	char aux[3];
 
 	int_to_uint32(num,num32);
-	for (int i=0;i<UINT32;i+=2) {
+	for (int i=0; i<UINT32; i+=2) {
 		snprintf(aux,sizeof(aux),"%c%c",num32[i],num32[i+1]);
 		vector_agregar(self,(int)strtol(aux, NULL, 16));
 	}
