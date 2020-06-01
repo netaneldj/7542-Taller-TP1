@@ -9,7 +9,8 @@
 #include "common_dynamicvector.h"
 
 #define BUFFER_SIZE 32
-#define RECV_MSG_SIZE 14
+#define RECV_MSG_SIZE 15
+#define MAX_LENGTH_MSG 300
 
 #define SUCCESS 0
 #define ERROR 1
@@ -50,7 +51,8 @@ int client_send(client_t* self, dbusmessage_t* dbus, char* msg) {
 }
 
 void client_recv(client_t* self, char* response) {
-	socket_recv_message(&self->socket,response,RECV_MSG_SIZE);
+	socket_recv_message(&self->socket,response,RECV_MSG_SIZE-1);
+	response[RECV_MSG_SIZE-1] = '\0';
 }
 
 /* ******************************************************************
@@ -84,7 +86,7 @@ static void process_text_file(client_t* self, FILE* text_file) {
 
 static void process_msg(client_t* self, vector_t* temp, int msgId){
 	char response[RECV_MSG_SIZE];
-	char line[vector_obtener_cantidad(temp)];
+	char line[MAX_LENGTH_MSG];
 	vector_t header, body;
 
 	memset(line, 0, vector_obtener_cantidad(temp)*sizeof(char));
@@ -98,7 +100,7 @@ static void process_msg(client_t* self, vector_t* temp, int msgId){
 	dbusmessage_set_body(&self->dbus, &body);
 	client_send(self,&self->dbus, line);
 	client_recv(self, response);
-    printf("%s\n",response);
+	printf("%s\n",response);
     vector_destruir(&header);
     vector_destruir(&body);
 }

@@ -6,7 +6,8 @@
 
 #define UINT32 8
 #define BUFFER_SIZE 32
-#define MAX_LENGTH_PARAM 50
+#define MAX_LENGTH_PARAM 80
+#define MAX_LENGTH_PROTOCOL 500
 
 /* ******************************************************************
  *                DEFINICION FUNCIONES AUXILIARES
@@ -146,14 +147,14 @@ int dbusmessage_server_recv(dbusmessage_t* self, socket_t* skt) {
 	lHeader = get_protocol_int(buffer1,12,16);
 	lPadding = get_padding(lHeader);
 
-	char protocol[lHeader+lPadding+lBody];
+	char protocol[MAX_LENGTH_PROTOCOL];
 	for(i=0; i<BUFFER_SIZE; i++){
 		protocol[i] = buffer1[i];
 	}
 
 	remain = lHeader+lPadding+lBody-BUFFER_SIZE;
 
-	char buffer2[remain];
+	char buffer2[MAX_LENGTH_PROTOCOL-BUFFER_SIZE];
 
 	if (socket_recv_message(skt,buffer2,remain) <= 0) return 0;
 
@@ -196,7 +197,7 @@ static int process_msg_args(dbusmessage_t* self){
 
 	while(pos<self->lMsg){
 		len = get_msg_int(self,pos,pos+4);
-		char arg[len+1];
+		char arg[MAX_LENGTH_PARAM];
 		strncpy(arg,self->msg+pos+4,len+1);
 		printf("    * %s\n",arg);
 		i++;
@@ -223,7 +224,7 @@ static int process_msg_parameters(dbusmessage_t* self){
 		}
 		len = get_msg_int(self,pos+4,pos+8);
 		padding = get_padding(pos+8+len+1);
-		char param[len+1];
+		char param[MAX_LENGTH_PARAM];
 		strncpy(param,self->msg+pos+8,len+1);
 		switch(tipo){
 		case 6:
@@ -295,7 +296,7 @@ int get_padding(int pos){
 }
 
 static int get_cant_split(char* param){
-	char temp[strlen(param)];
+	char temp[MAX_LENGTH_PROTOCOL];
 	snprintf(temp,strlen(param)+1,"%s",param);
 	char* ptr = NULL;
 	int count = 0;
@@ -504,7 +505,7 @@ static void set_protocol_args(dbusmessage_t* self, char* param) {
 
 static void set_protocol_init_uint32(vector_t* self){
 	for (int i=0; i<UINT32/2; i++) {
-		vector_agregar(self,0);
+		vector_agregar(self, 0);
 	}
 }
 
